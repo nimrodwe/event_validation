@@ -6,9 +6,10 @@ import threading
 import time
 import webbrowser
 
-from flask import Flask, jsonify, render_template_string
+from flask import Flask, jsonify, render_template_string, request
 from werkzeug.serving import make_server
 
+from src.ci_runs import load_ci_runs
 from src.config import OUT
 from src.run_log import clear_test_runs, load_test_runs
 
@@ -86,13 +87,23 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     button.btn:hover { background: #334155; }
     button.btn-danger { border-color: #7f1d1d; color: #fca5a5; }
     button.btn-danger:hover { background: #7f1d1d; color: #fff; }
+    button.btn-link {
+      display: inline-block; text-decoration: none; margin-right: .5rem; margin-top: .5rem;
+    }
+    .panel + .panel { margin-top: 1.25rem; }
+    .badge.success { color: #4ade80; border-color: #166534; }
+    .badge.failure { color: #f87171; border-color: #7f1d1d; }
+    .badge.cancelled { color: #94a3b8; border-color: #475569; }
+    .badge.in_progress { color: #38bdf8; border-color: #075985; }
+    .ci-meta { color: #94a3b8; font-size: .85rem; }
+    .ci-note { color: #64748b; font-size: .8rem; margin-top: .75rem; }
   </style>
 </head>
 <body>
   <header>
     <div>
       <h1>Pytest Dashboard</h1>
-      <div class="sub">Click a run, then a test name, to see step logs</div>
+      <div class="sub">Local pytest runs on top; GitHub Actions CI runs below</div>
     </div>
     <button class="btn btn-danger" id="shutdown" type="button">Shut down server</button>
   </header>
@@ -104,9 +115,17 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       </div>
       <div id="runs"></div>
     </section>
+    <section class="panel panel-pad">
+      <div class="section-head">
+        <h2>Pytest CI runs</h2>
+        <button class="btn" id="refresh-ci" type="button">Refresh</button>
+      </div>
+      <div id="ci-runs"></div>
+    </section>
   </main>
   <script>
     let testRuns = {{ test_runs_json | safe }};
+    let ciPayload = {{ ci_runs_json | safe }};
 
     function outcomeBadge(outcome) {
       const cls = outcome === 'passed' ? 'passed' : outcome === 'failed' ? 'failed' : 'skipped';
@@ -235,12 +254,107 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       }
     }
 
+    const openCiRuns = new Set();
+
+    function ciBadge(run) {
+      // Prefer conclusion once GitHub has finished the run.
+      if (run.conclusion) {
+        const c = run.conclusion;
+        const cls = (c === 'success' || c === 'failure' || c === 'cancelled') ? c : 'skipped';
+        return `<span class="badge ${cls}">${escapeHtml(c)}</span>`;
+      }
+      const st = run.status || 'queued';
+      return `<span class="badge in_progress">${escapeHtml(st)}</span>`;
+    }
+
+    function ciHasInProgress(payload) {
+      return ((payload && payload.runs) || []).some(
+        r => !r.conclusion || (r.status && r.status !== 'completed')
+      );
+    }
+
+    function renderCiRuns() {
+      const root = document.getElementById('ci-runs');
+      if (ciPayload && ciPayload.error && !(ciPayload.runs || []).length) {
+        root.innerHTML = `<div class="empty">${escapeHtml(ciPayload.error)}</div>`;
+        return;
+      }
+      const runs = (ciPayload && ciPayload.runs) || [];
+      if (!runs.length) {
+        root.innerHTML = '<div class="empty">No CI runs yet. Push to main or run the workflow from Actions.</div>';
+        return;
+      }
+      root.innerHTML = '';
+      runs.forEach((run) => {
+        const key = String(run.run_number || run.html_url || '');
+        const box = document.createElement('div');
+        box.className = 'run' + (openCiRuns.has(key) ? ' open' : '');
+        const head = document.createElement('div');
+        head.className = 'run-head';
+        head.innerHTML = `
+          <strong>#${escapeHtml(String(run.run_number || '?'))}</strong>
+          ${ciBadge(run)}
+          <span class="badge">${escapeHtml(run.event || '')}</span>
+          <span class="badge">${escapeHtml(run.head_branch || '')}</span>
+          <span class="ci-meta">${niceDate(run.created_at)}</span>`;
+        head.onclick = () => {
+          if (openCiRuns.has(key)) openCiRuns.delete(key);
+          else openCiRuns.add(key);
+          box.classList.toggle('open');
+        };
+
+        const body = document.createElement('div');
+        body.className = 'run-body';
+        const title = escapeHtml(run.display_title || '');
+        const sha = escapeHtml(run.head_sha || '');
+        let links = '';
+        if (run.html_url) {
+          links += `<a class="btn btn-link" href="${escapeHtml(run.html_url)}" target="_blank" rel="noopener">Open in Actions</a>`;
+        }
+        if (run.allure_url) {
+          links += `<a class="btn btn-link" href="${escapeHtml(run.allure_url)}" target="_blank" rel="noopener">Allure report (latest)</a>`;
+        } else if (ciPayload.allure_pages_url) {
+          links += `<a class="btn btn-link" href="${escapeHtml(ciPayload.allure_pages_url)}" target="_blank" rel="noopener">Allure report (live site)</a>`;
+        }
+        body.innerHTML = `
+          <div class="ci-meta">${title}</div>
+          <div class="ci-meta">SHA ${sha || '—'}</div>
+          ${links}
+          <p class="ci-note">Live Allure Pages always shows the latest deploy. For this run’s full snapshot, open Actions and download the allure-report artifact.</p>`;
+
+        box.appendChild(head);
+        box.appendChild(body);
+        root.appendChild(box);
+      });
+    }
+
+    let ciTimer = null;
+    function scheduleCiRefresh() {
+      if (ciTimer) clearInterval(ciTimer);
+      const ms = ciHasInProgress(ciPayload) ? 5000 : 30000;
+      ciTimer = setInterval(() => refreshCi(false), ms);
+    }
+
+    async function refreshCi(force) {
+      try {
+        const url = force ? '/api/ci-runs?refresh=1' : '/api/ci-runs';
+        ciPayload = await fetch(url).then(r => r.json());
+        renderCiRuns();
+      } catch (err) {
+        ciPayload = { runs: [], error: 'Could not reach local /api/ci-runs', allure_pages_url: '' };
+        renderCiRuns();
+      }
+      scheduleCiRefresh();
+    }
+
     document.getElementById('clear-runs').onclick = async () => {
       if (!confirm('Clear all pytest runs from the dashboard?')) return;
       await fetch('/api/test-runs/clear', { method: 'POST' });
       testRuns = [];
       renderRuns();
     };
+
+    document.getElementById('refresh-ci').onclick = () => refreshCi(true);
 
     document.getElementById('shutdown').onclick = async () => {
       if (!confirm('Shut down the dashboard and local receiver?')) return;
@@ -252,7 +366,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     };
 
     renderRuns();
+    renderCiRuns();
     refreshLive();
+    refreshCi(true);
     setInterval(refreshLive, 2000);
   </script>
 </body>
@@ -307,6 +423,7 @@ class Report:
         self.app.add_url_rule("/", "home", self.home)
         self.app.add_url_rule("/api/test-runs", "test_runs", self.api_test_runs)
         self.app.add_url_rule("/api/test-runs/clear", "clear_runs", self.api_clear_test_runs, methods=["POST"])
+        self.app.add_url_rule("/api/ci-runs", "ci_runs", self.api_ci_runs)
         self.app.add_url_rule("/api/presence", "presence_ping", self.api_presence_ping, methods=["POST"])
         self.app.add_url_rule("/api/presence", "presence_status", self.api_presence_status, methods=["GET"])
         self.app.add_url_rule("/api/shutdown", "shutdown", self.api_shutdown, methods=["POST"])
@@ -352,6 +469,7 @@ class Report:
         return render_template_string(
             DASHBOARD_HTML,
             test_runs_json=json.dumps(self.test_runs),
+            ci_runs_json=json.dumps(load_ci_runs()),
         )
 
     def api_test_runs(self):
@@ -360,6 +478,10 @@ class Report:
     def api_clear_test_runs(self):
         clear_test_runs()
         return jsonify({"ok": True})
+
+    def api_ci_runs(self):
+        force = request.args.get("refresh") in ("1", "true", "yes")
+        return jsonify(load_ci_runs(force=force))
 
     def api_presence_ping(self):
         self._last_presence = time.time()

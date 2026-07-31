@@ -40,7 +40,7 @@ def pytest_sessionfinish(session, exitstatus):
 
 @pytest.hookimpl(tryfirst=True)
 def pytest_runtest_setup(item):
-    """Begin a dashboard test entry and attach Allure labels."""
+    """Begin a dashboard test entry and attach allure labels."""
     RUN_STORE.begin_test(item.nodeid)
 
     allure.dynamic.epic("Event Validation")

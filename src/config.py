@@ -11,6 +11,11 @@ DATASET = DATA / "validation_dataset_intentionally_corrupted.json"
 EXPECTED_TYPES = DATA / "EventsSchema.json"
 TEST_RUNS = OUT / "test_runs"
 
+# GitHub Actions / Allure Pages (local dashboard CI panel)
+GITHUB_REPO = "nimrodwe/event_validation"
+GITHUB_WORKFLOW_FILE = "allure-github-pages.yml"
+ALLURE_PAGES_URL = "https://nimrodwe.github.io/event_validation/"
+
 GOLDEN = {
     99, 119, 139, 159, 179, 199, 219, 239, 259, 279, 299, 319, 339, 359,
     379, 399, 419, 439, 459, 479, 499, 519, 539, 3990, 3991, 3992,

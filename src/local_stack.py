@@ -66,7 +66,14 @@ def ensure_running(open_browser=True):
     if dashboard_up():
         # Reopen the browser only if no tab is currently viewing the dashboard.
         if open_browser and not browser_tab_active():
+            print("Dashboard already running — opening " + DASHBOARD_URL)
             webbrowser.open(DASHBOARD_URL)
+        elif open_browser:
+            print(
+                "Dashboard already open in a browser tab ("
+                + DASHBOARD_URL
+                + "). Refresh that tab if the UI looks stale."
+            )
         return LocalHost()
 
     OUT.mkdir(parents=True, exist_ok=True)
@@ -86,6 +93,7 @@ def ensure_running(open_browser=True):
     else:
         popen_kwargs["start_new_session"] = True
 
+    print("Starting local stack (receiver + dashboard)…")
     subprocess.Popen(**popen_kwargs)
     log_file.close()
 
@@ -97,5 +105,6 @@ def ensure_running(open_browser=True):
         raise RuntimeError("Local stack did not start on " + DASHBOARD_URL)
 
     if open_browser:
+        print("Opening dashboard " + DASHBOARD_URL)
         webbrowser.open(DASHBOARD_URL)
     return LocalHost()
