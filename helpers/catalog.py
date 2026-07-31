@@ -49,12 +49,44 @@ def event_for_case(events, case_id):
 
 def send_case(localhost, case_id, event, headers=None):
     """POST one catalog event to localhost with optional delivery headers."""
+    try:
+        import allure
+        from allure_commons.types import AttachmentType
+
+        allure.attach(
+            json.dumps(event, indent=2),
+            name="event-" + str(case_id),
+            attachment_type=AttachmentType.JSON,
+        )
+        if headers:
+            allure.attach(
+                json.dumps(headers, indent=2),
+                name="headers-" + str(case_id),
+                attachment_type=AttachmentType.JSON,
+            )
+    except Exception:
+        pass
+
     http = HttpClient(timeout=5, retries=3)
     body = base64.b64encode(json.dumps(event).encode("utf-8"))
     req_headers = {"X-Case-Id": case_id}
     if headers:
         req_headers.update(headers)
-    return http.post(localhost.url, data=body, headers=req_headers)
+    response = http.post(localhost.url, data=body, headers=req_headers)
+
+    try:
+        import allure
+        from allure_commons.types import AttachmentType
+
+        allure.attach(
+            "status=" + str(response.status_code) + "\n" + (response.text or ""),
+            name="response-" + str(case_id),
+            attachment_type=AttachmentType.TEXT,
+        )
+    except Exception:
+        pass
+
+    return response
 
 
 def read_received(localhost):

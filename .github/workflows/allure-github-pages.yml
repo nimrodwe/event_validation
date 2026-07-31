@@ -5,7 +5,10 @@ on:
   # Every push to main runs the full suite and publishes Allure to Pages.
   push:
     branches: [main, master]
-  # Pull requests (and any branch): run manually from the Actions tab.
+  # PRs targeting main: run tests + Allure artifact (no Pages deploy).
+  pull_request:
+    branches: [main, master]
+  # Manual run from the Actions tab (any branch).
   workflow_dispatch:
   # Daily at 22:00 Israel time (UTC+3) → 19:00 UTC. Cron is always UTC.
   schedule:
@@ -18,8 +21,8 @@ permissions:
   actions: read
 
 concurrency:
-  group: allure-pages
-  cancel-in-progress: false
+  group: allure-pages-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test-and-report:

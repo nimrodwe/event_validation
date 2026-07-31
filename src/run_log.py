@@ -8,20 +8,48 @@ from src.config import TEST_RUNS
 
 
 class StepLogHandler(logging.Handler):
-    """Send log records into a simple list of step dicts."""
+    """Send log records into the dashboard step list and into Allure."""
 
     def __init__(self, steps):
         super().__init__()
         self.steps = steps
 
     def emit(self, record):
+        message = record.getMessage()
         self.steps.append(
             {
                 "time": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
                 "level": record.levelname,
-                "message": record.getMessage(),
+                "message": message,
             }
         )
+        self._allure_capture(record.levelname, message)
+
+    @staticmethod
+    def _allure_capture(level, message):
+        try:
+            import allure
+            from allure_commons.types import AttachmentType
+        except ImportError:
+            return
+
+        text = message if message is not None else ""
+        stripped = text.strip()
+        title = level + " log"
+        try:
+            if stripped.startswith("{") or stripped.startswith("["):
+                try:
+                    pretty = json.dumps(json.loads(stripped), indent=2)
+                except (json.JSONDecodeError, TypeError):
+                    pretty = stripped
+                allure.attach(pretty, name=title, attachment_type=AttachmentType.JSON)
+            else:
+                with allure.step("[" + level + "] " + stripped[:240]):
+                    if len(stripped) > 240:
+                        allure.attach(stripped, name=title, attachment_type=AttachmentType.TEXT)
+        except Exception:
+            # Never break a test because Allure reporting failed.
+            pass
 
 
 class TestRunStore:

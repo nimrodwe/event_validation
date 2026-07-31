@@ -55,6 +55,21 @@ def pytest_runtest_setup(item):
         allure.dynamic.feature("Tests")
         allure.dynamic.story(item.name)
 
+    # Surface parametrize inputs (e.g. field match dicts) in the Allure test.
+    callspec = getattr(item, "callspec", None)
+    if callspec:
+        for key, value in callspec.params.items():
+            if isinstance(value, (dict, list)):
+                import json
+
+                allure.attach(
+                    json.dumps(value, indent=2, default=str),
+                    name="param-" + str(key),
+                    attachment_type=allure.attachment_type.JSON,
+                )
+            else:
+                allure.dynamic.parameter(str(key), str(value))
+
 
 def pytest_runtest_logreport(report):
     """Record pass/fail on the dashboard run after the test body finishes."""
