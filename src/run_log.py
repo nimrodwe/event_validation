@@ -1,0 +1,111 @@
+"""Collect pytest step logs so the dashboard can show each run."""
+
+import json
+import logging
+from datetime import datetime, timezone
+
+from src.config import TEST_RUNS
+
+
+class StepLogHandler(logging.Handler):
+    """Send log records into a simple list of step dicts."""
+
+    def __init__(self, steps):
+        super().__init__()
+        self.steps = steps
+
+    def emit(self, record):
+        self.steps.append(
+            {
+                "time": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+                "level": record.levelname,
+                "message": record.getMessage(),
+            }
+        )
+
+
+class TestRunStore:
+    """One pytest session → one JSON file under out/test_runs/."""
+
+    def __init__(self):
+        self.run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        self.started = datetime.now(timezone.utc).isoformat()
+        self.tests = []
+        self.path = None
+
+    def start(self):
+        TEST_RUNS.mkdir(parents=True, exist_ok=True)
+        self.path = TEST_RUNS / (self.run_id + ".json")
+        self.save()
+
+    def begin_test(self, nodeid):
+        current = {
+            "nodeid": nodeid,
+            "outcome": "running",
+            "steps": [],
+        }
+        self.tests.append(current)
+        return current
+
+    def end_test(self, nodeid, outcome):
+        for test in self.tests:
+            if test["nodeid"] == nodeid and test["outcome"] == "running":
+                test["outcome"] = outcome
+                break
+        self.save()
+
+    def finish(self):
+        payload = {
+            "run_id": self.run_id,
+            "started": self.started,
+            "finished": datetime.now(timezone.utc).isoformat(),
+            "tests": self.tests,
+        }
+        if self.path is not None:
+            self.path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        latest = TEST_RUNS / "latest.json"
+        latest.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    def save(self):
+        if self.path is None:
+            return
+        payload = {
+            "run_id": self.run_id,
+            "started": self.started,
+            "finished": None,
+            "tests": self.tests,
+        }
+        self.path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def load_test_runs(limit=20):
+    """Newest pytest runs first, for the dashboard."""
+    if not TEST_RUNS.exists():
+        return []
+
+    runs = []
+    for path in TEST_RUNS.glob("*.json"):
+        if path.name == "latest.json":
+            continue
+        try:
+            runs.append(json.loads(path.read_text(encoding="utf-8")))
+        except (json.JSONDecodeError, OSError):
+            continue
+
+    runs.sort(key=lambda r: r.get("started", ""), reverse=True)
+    return runs[:limit]
+
+
+def clear_test_runs():
+    """Delete all saved pytest run logs."""
+    if not TEST_RUNS.exists():
+        return
+    for path in TEST_RUNS.glob("*.json"):
+        path.unlink()
+
+
+def make_step_logger(name, steps):
+    """Logger that writes both to the console and to the run store steps list."""
+    from helpers.logger import LoggerHelper
+
+    return LoggerHelper(name).add_handler(StepLogHandler(steps)).get()

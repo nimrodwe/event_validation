@@ -1,0 +1,641 @@
+[
+  {
+    "name": "datetime",
+    "type": "DateTime64(3)",
+    "default_type": "DEFAULT",
+    "default_expression": "now()",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "event",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "externalid",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "appdome_fusion_server_name",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "appdome_fusion_fused_app_token",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "appdome_fusion_app_token",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "distinct_id",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "email",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "threatcode",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "geosource_ip",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "uuid",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "rinternalerrorcode",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "reason",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "certificatecn",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "certificatesha1",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "host",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "message",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "app_build_number",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "app_version",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "city",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "country_code",
+    "type": "LowCardinality(FixedString(2))",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "mp_manufacturer",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "mp_model",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "mp_os",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "region",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "bucket",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "timezone",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "os_version",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "mp_wifi",
+    "type": "Nullable(Bool)",
+    "default_type": "DEFAULT",
+    "default_expression": "NULL",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "application",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "carriername",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "upgradedfrom",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "launch_id",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "devicemanufacturer",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "devicemodel",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "deviceplatform",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "immutabledeviceid",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "kernelinfo",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "malware",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "quitaftermessage",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "reasoncode",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "reasondata",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "sdkversion",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "mp_processing_time_ms",
+    "type": "DateTime64(6, 'UTC')",
+    "default_type": "DEFAULT",
+    "default_expression": "now64(6, 'UTC')",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "appname",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "keyboard",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "data",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "enforce",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "osversion",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "sandboxpath",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "engine_version",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "device_id",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "previousimmutabledeviceid",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "previousimmutabledeviceidsimilarity",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "previousdeviceidsimilarity",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "immutabledeviceiddetections",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "installationid",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "packagename",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "servicename",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "unauthorized_ai_assistant",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "showthemessage",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "enforce_feature",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "dispatchappnotification",
+    "type": "LowCardinality(String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "chainserialnumbers",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "full_threat_code",
+    "type": "String",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "properties",
+    "type": "Map(String, String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "tda",
+    "type": "Map(String, String)",
+    "default_type": "",
+    "default_expression": "",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "deviceattributes",
+    "type": "String",
+    "default_type": "DEFAULT",
+    "default_expression": "''",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "deviceidstate",
+    "type": "String",
+    "default_type": "DEFAULT",
+    "default_expression": "''",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "chainexpirationdates",
+    "type": "String",
+    "default_type": "DEFAULT",
+    "default_expression": "''",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  },
+  {
+    "name": "playstoreinfo",
+    "type": "String",
+    "default_type": "DEFAULT",
+    "default_expression": "''",
+    "comment": "",
+    "codec_expression": "",
+    "ttl_expression": ""
+  }
+]

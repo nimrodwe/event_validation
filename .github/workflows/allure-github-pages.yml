@@ -1,0 +1,131 @@
+name: Allure → GitHub Pages
+
+on:
+  # Every push to main runs the full suite and publishes Allure to Pages.
+  push:
+    branches: [main, master]
+  # Pull requests (and any branch): run manually from the Actions tab.
+  workflow_dispatch:
+  # Daily at 22:00 Israel time (UTC+3) → 19:00 UTC. Cron is always UTC.
+  schedule:
+    - cron: "0 19 * * *"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  actions: read
+
+concurrency:
+  group: allure-pages
+  cancel-in-progress: false
+
+jobs:
+  test-and-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: docs/requirements.txt
+
+      - name: Set up Java (Allure CLI)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Allure commandline
+        run: |
+          ALLURE_VERSION=2.32.2
+          curl -fsSL "https://github.com/allure-framework/allure2/releases/download/${ALLURE_VERSION}/allure-${ALLURE_VERSION}.tgz" \
+            | sudo tar -xz -C /opt/
+          echo "/opt/allure-${ALLURE_VERSION}/bin" >> "$GITHUB_PATH"
+
+      - name: Install Python dependencies
+        run: python -m pip install -r docs/requirements.txt
+
+      - name: Restore Allure history
+        uses: actions/cache@v4
+        with:
+          path: out/allure-history
+          key: allure-history-${{ github.ref_name }}-${{ github.run_number }}
+          restore-keys: |
+            allure-history-${{ github.ref_name }}-
+            allure-history-
+
+      - name: Run pytest
+        id: pytest
+        continue-on-error: true
+        env:
+          CI: "true"
+        run: python -m pytest -v --tb=short
+
+      - name: Prepare Allure results history
+        run: |
+          mkdir -p out/allure-results
+          if [ -d out/allure-history ]; then
+            rm -rf out/allure-results/history
+            cp -r out/allure-history out/allure-results/history
+          fi
+
+      - name: Generate Allure HTML report
+        run: allure generate out/allure-results -o out/allure-report --clean
+
+      - name: Save Allure history for next run
+        if: always()
+        run: |
+          rm -rf out/allure-history
+          if [ -d out/allure-report/history ]; then
+            cp -r out/allure-report/history out/allure-history
+          else
+            mkdir -p out/allure-history
+          fi
+
+      - name: Upload report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report
+          path: out/allure-report
+          retention-days: 14
+
+      - name: Upload GitHub Pages artifact
+        if: >
+          github.ref == 'refs/heads/main' ||
+          github.ref == 'refs/heads/master' ||
+          github.event_name == 'schedule'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: out/allure-report
+
+      - name: Fail job if pytest failed
+        if: steps.pytest.outcome == 'failure'
+        run: |
+          echo "Pytest failed — Allure report was still generated."
+          exit 1
+
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    needs: test-and-report
+    if: >
+      always() &&
+      needs.test-and-report.result != 'cancelled' &&
+      (
+        github.ref == 'refs/heads/main' ||
+        github.ref == 'refs/heads/master' ||
+        github.event_name == 'schedule'
+      )
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
