@@ -6,8 +6,9 @@ import shutil
 import subprocess
 import sys
 
+from helpers.generator import Generator
 from src.config import OUT
-from src.pipeline import Generator, Sender
+from src.pipeline import Sender
 from src.receiver import Receiver
 from src.report import Report
 from src.validate import Validator
@@ -82,7 +83,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "cmd",
+        nargs="?",
+        default="dashboard",
         choices=["all", "gen", "validate", "serve", "dashboard", "stack", "allure"],
+        help="Command to run (default: dashboard)",
     )
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--no-open", action="store_true")
@@ -117,9 +121,9 @@ def main():
         return
 
     if args.cmd == "stack":
-        from src.local_stack import run as run_stack
+        from src.local_stack import LocalStack
 
-        run_stack(open_browser=not args.no_open)
+        LocalStack.run(open_browser=not args.no_open)
         return
 
     if args.cmd == "allure":

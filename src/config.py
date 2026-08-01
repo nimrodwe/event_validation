@@ -15,6 +15,12 @@ TEST_RUNS = OUT / "test_runs"
 GITHUB_REPO = "nimrodwe/event_validation"
 GITHUB_WORKFLOW_FILE = "allure-github-pages.yml"
 ALLURE_PAGES_URL = "https://nimrodwe.github.io/event_validation/"
+GITHUB_ACTIONS_URL = (
+    "https://github.com/"
+    + GITHUB_REPO
+    + "/actions/workflows/"
+    + GITHUB_WORKFLOW_FILE
+)
 
 GOLDEN = {
     99, 119, 139, 159, 179, 199, 219, 239, 259, 279, 299, 319, 339, 359,

@@ -74,16 +74,15 @@ jobs:
         env:
           CI: "true"
         run: |
-          # Always run pytest so Allure has real results; force_fail fails the step afterward.
-          set +e
-          python -m pytest -v --tb=short
-          code=$?
-          set -e
+          # force_fail: inject a real failing pytest so Allure shows a failed test.
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.force_fail }}" = "true" ]; then
-            echo "Forced CI failure for dashboard check (pytest exit=$code)"
-            exit 1
+            printf '%s\n' \
+              'def test_forced_ci_failure():' \
+              '    assert False, "Forced CI failure for dashboard check"' \
+              > tests/_ci_force_fail.py
+            echo "Injected tests/_ci_force_fail.py for Allure failure demo"
           fi
-          exit "$code"
+          python -m pytest -v --tb=short
 
       - name: Prepare Allure results history
         run: |

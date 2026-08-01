@@ -5,9 +5,11 @@ import sys
 import allure
 import pytest
 
+from helpers.asserts import AssertHelper
 from src.config import OUT
-from src.local_stack import ensure_running
-from src.run_log import TestRunStore, make_step_logger
+from src.local_stack import LocalStack
+from src.receiver import Receiver
+from src.run_log import TestRunStore
 from tests.base_class import BaseClass
 
 ALLURE_RESULTS = OUT / "allure-results"
@@ -73,8 +75,50 @@ def pytest_runtest_setup(item):
 
 def pytest_runtest_logreport(report):
     """Record pass/fail on the dashboard run after the test body finishes."""
-    if report.when == "call":
-        RUN_STORE.end_test(report.nodeid, report.outcome)
+    if report.when != "call":
+        return
+    if report.failed and report.longrepr:
+        for test in reversed(RUN_STORE.tests):
+            if test["nodeid"] == report.nodeid:
+                # Avoid duplicating AssertHelper errors already logged via step_log.
+                already = any(
+                    s.get("level") == "ERROR" for s in (test.get("steps") or [])
+                )
+                if not already:
+                    from datetime import datetime, timezone
+
+                    test.setdefault("steps", []).append(
+                        {
+                            "time": datetime.now(timezone.utc).isoformat(),
+                            "level": "ERROR",
+                            "message": str(report.longrepr),
+                        }
+                    )
+                break
+    RUN_STORE.end_test(report.nodeid, report.outcome)
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_exception_interact(node, call, report):
+    """Attach non-AssertHelper failures to Allure (AssertHelper already attaches)."""
+    if call.excinfo is None:
+        return
+    from helpers.asserts import AssertError
+
+    exc = call.excinfo.value
+    if isinstance(exc, AssertError):
+        return
+    text = str(exc)
+    if not text:
+        return
+    try:
+        allure.attach(
+            text,
+            name="Why it failed",
+            attachment_type=allure.attachment_type.TEXT,
+        )
+    except Exception:
+        pass
 
 
 def _steps_for(nodeid):
@@ -88,7 +132,7 @@ def _steps_for(nodeid):
 def step_log(request):
     """Logger that writes to the console and to the dashboard step list."""
     steps = _steps_for(request.node.nodeid)
-    logger = make_step_logger(request.node.nodeid, steps)
+    logger = TestRunStore.make_step_logger(request.node.nodeid, steps)
     yield logger
     RUN_STORE.save()
 
@@ -97,10 +141,32 @@ def step_log(request):
 def localhost():
     """Point tests at the local stack; stack stays up after pytest exits."""
     open_browser = os.environ.get("CI", "").lower() not in ("1", "true", "yes")
-    yield ensure_running(open_browser=open_browser)
+    yield LocalStack.ensure_running(open_browser=open_browser)
 
 
 @pytest.fixture
-def initialize(localhost, step_log):
+def initialize(localhost, step_log, request):
     """Give each test data + steps + the shared localhost receiver."""
-    yield BaseClass(localhost, step_log)
+    AssertHelper.log = step_log
+
+    def record_uuid(uuid):
+        """Persist the first UUID for this test and log it for step drill-down."""
+        if RUN_STORE.set_uuid(request.node.nodeid, uuid):
+            step_log.info("UUID " + ("" if uuid is None else str(uuid)))
+
+    AssertHelper.record_uuid = record_uuid
+    base = BaseClass(localhost, step_log)
+    base.record_uuid = record_uuid
+    try:
+        yield base
+    finally:
+        AssertHelper.log = None
+        AssertHelper.record_uuid = None
+
+
+@pytest.fixture
+def catalog_receiver(tmp_path):
+    """Fresh receiver so catalog tests use current server code."""
+    server = Receiver.connect(tmp_path / "received")
+    yield server
+    server.disconnect()

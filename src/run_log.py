@@ -48,7 +48,6 @@ class StepLogHandler(logging.Handler):
                     if len(stripped) > 240:
                         allure.attach(stripped, name=title, attachment_type=AttachmentType.TEXT)
         except Exception:
-            # Never break a test because Allure reporting failed.
             pass
 
 
@@ -70,15 +69,36 @@ class TestRunStore:
         current = {
             "nodeid": nodeid,
             "outcome": "running",
+            "uuid": None,
             "steps": [],
         }
         self.tests.append(current)
         return current
 
+    def set_uuid(self, nodeid, uuid):
+        """Record the first UUID for a running test (the one sent at the start).
+
+        Returns True if this call stored the uuid, False if already set / not found.
+        """
+        for test in reversed(self.tests):
+            if test["nodeid"] == nodeid and test["outcome"] == "running":
+                if test.get("uuid") is not None:
+                    return False
+                test["uuid"] = "" if uuid is None else str(uuid)
+                self.save()
+                return True
+        return False
+
     def end_test(self, nodeid, outcome):
         for test in self.tests:
             if test["nodeid"] == nodeid and test["outcome"] == "running":
                 test["outcome"] = outcome
+                # Failed tests: ERROR first so the dashboard shows it above POST/GET data.
+                if outcome == "failed":
+                    steps = test.get("steps") or []
+                    errs = [s for s in steps if s.get("level") == "ERROR"]
+                    other = [s for s in steps if s.get("level") != "ERROR"]
+                    test["steps"] = errs + other
                 break
         self.save()
 
@@ -105,35 +125,35 @@ class TestRunStore:
         }
         self.path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
+    @staticmethod
+    def load_runs(limit=20):
+        """Newest pytest runs first, for the dashboard."""
+        if not TEST_RUNS.exists():
+            return []
 
-def load_test_runs(limit=20):
-    """Newest pytest runs first, for the dashboard."""
-    if not TEST_RUNS.exists():
-        return []
+        runs = []
+        for path in TEST_RUNS.glob("*.json"):
+            if path.name == "latest.json":
+                continue
+            try:
+                runs.append(json.loads(path.read_text(encoding="utf-8")))
+            except (json.JSONDecodeError, OSError):
+                continue
 
-    runs = []
-    for path in TEST_RUNS.glob("*.json"):
-        if path.name == "latest.json":
-            continue
-        try:
-            runs.append(json.loads(path.read_text(encoding="utf-8")))
-        except (json.JSONDecodeError, OSError):
-            continue
+        runs.sort(key=lambda r: r.get("started", ""), reverse=True)
+        return runs[:limit]
 
-    runs.sort(key=lambda r: r.get("started", ""), reverse=True)
-    return runs[:limit]
+    @staticmethod
+    def clear_runs():
+        """Delete all saved pytest run logs."""
+        if not TEST_RUNS.exists():
+            return
+        for path in TEST_RUNS.glob("*.json"):
+            path.unlink()
 
+    @staticmethod
+    def make_step_logger(name, steps):
+        """Logger that writes both to the console and to the run store steps list."""
+        from helpers.logger import LoggerHelper
 
-def clear_test_runs():
-    """Delete all saved pytest run logs."""
-    if not TEST_RUNS.exists():
-        return
-    for path in TEST_RUNS.glob("*.json"):
-        path.unlink()
-
-
-def make_step_logger(name, steps):
-    """Logger that writes both to the console and to the run store steps list."""
-    from helpers.logger import LoggerHelper
-
-    return LoggerHelper(name).add_handler(StepLogHandler(steps)).get()
+        return LoggerHelper(name).add_handler(StepLogHandler(steps)).get()

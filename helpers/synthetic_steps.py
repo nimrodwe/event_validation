@@ -3,7 +3,7 @@ import json
 import re
 
 from services.http_client import HttpClient
-from helpers.type_validation import Step
+from helpers.steps import Step
 
 
 class SyntheticSteps(Step):
@@ -27,7 +27,7 @@ class SyntheticSteps(Step):
 
         return matches
 
-    def send(self, event, localhost):
+    def send(self, event, localhost, case_id="POS-SYNTHETIC"):
         """POST the synthetic event to localhost."""
         self.log.info("POST " + localhost.url)
         self.log.info(json.dumps(event))
@@ -35,7 +35,7 @@ class SyntheticSteps(Step):
         response = self.http.post(
             localhost.url,
             data=body,
-            headers={"X-Case-Id": "POS-SYNTHETIC"},
+            headers={"X-Case-Id": case_id},
         )
         self.log.info("status=" + str(response.status_code))
         return response

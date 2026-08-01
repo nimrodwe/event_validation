@@ -2,8 +2,13 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.git/
+.github/
 out/
 allure-results/
 allure-report/
 *.egg-info/
-tests/_ci_force_fail.py
+.cursor/
+agent-transcripts/
+*.md
+!README.md

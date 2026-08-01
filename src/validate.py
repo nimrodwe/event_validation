@@ -41,6 +41,8 @@ class Finding:
 
 
 class Validator:
+    TOKEN_MIN_LEN = 30
+
     def __init__(self):
         self.schema = Schema()
 
@@ -200,14 +202,25 @@ class Validator:
             if props["devicePlatform"] != props["$os"]:
                 findings.append(self.make_finding(case_id, "XFIELD-OS", "platform/$os", "mismatch", "equal", "cross-field", source))
 
+        return findings
+
+    def check_token_length(self, event, case_id):
+        """Boundary rule: Appdome fusion app token length when set (min 30)."""
+        findings = []
+        props = event.get("properties") or {}
         token = props.get("Appdome fusion app token")
-        if token is not None and token != "" and len(str(token)) < 30:
+        if token is not None and token != "" and len(str(token)) < self.TOKEN_MIN_LEN:
             findings.append(
                 self.make_finding(
-                    case_id, "FMT", "Appdome fusion app token", token, "UUID-like", "format", source
+                    case_id,
+                    "FMT",
+                    "Appdome fusion app token",
+                    token,
+                    "len>=" + str(self.TOKEN_MIN_LEN),
+                    "format",
+                    "received",
                 )
             )
-
         return findings
 
     def check_dupes(self, rows):

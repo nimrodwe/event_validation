@@ -1,0 +1,22 @@
+services:
+  stack:
+    build: .
+    ports:
+      - "8080:8080"   # dashboard → http://localhost:8080
+      - "8765:8765"   # event receiver
+    volumes:
+      - .:/app
+    environment:
+      BIND_HOST: "0.0.0.0"
+      CI: "true"
+    command: ["python", "run.py", "stack", "--no-open"]
+
+  test:
+    build: .
+    volumes:
+      - .:/app
+    environment:
+      BIND_HOST: "0.0.0.0"
+      CI: "true"
+    command: ["python", "-m", "pytest", "-v"]
+    profiles: ["test"]

@@ -3,6 +3,7 @@
 import base64
 import hashlib
 import json
+import os
 import shutil
 import socket
 import tempfile
@@ -17,6 +18,8 @@ from services.http_status import HttpStatus
 
 class Receiver:
     HOST = "127.0.0.1"
+    # Docker sets BIND_HOST=0.0.0.0 so published ports are reachable from the Mac.
+    BIND_HOST = os.environ.get("BIND_HOST", "127.0.0.1")
     PATH = "/v1/events"
 
     def __init__(self, out_dir):
@@ -28,6 +31,7 @@ class Receiver:
         self._temp_out = False
         self.app = Flask(__name__)
         self.app.add_url_rule(self.PATH, "receive", self.receive, methods=["POST"])
+        self.app.add_url_rule(self.PATH, "list_events", self.list_events, methods=["GET"])
 
     @staticmethod
     def connect(out_dir=None, port=None):
@@ -109,6 +113,25 @@ class Receiver:
 
         return jsonify(receipt), HttpStatus.ACCEPTED
 
+    def _stored_rows(self):
+        """Load decoded rows previously saved by POST."""
+        path = self.out / "events.jsonl"
+        if not path.exists():
+            return []
+        rows = []
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                rows.append(json.loads(line))
+        return rows
+
+    def list_events(self):
+        """GET stored events (optional ?case_id= filter) — data after it went through the API."""
+        rows = self._stored_rows()
+        case_id = request.args.get("case_id")
+        if case_id:
+            rows = [row for row in rows if row.get("case_id") == case_id]
+        return jsonify({"events": rows}), HttpStatus.OK
+
     def start(self, port=8765, blocking=False):
         self.out.mkdir(parents=True, exist_ok=True)
         (self.out / "raw").mkdir(exist_ok=True)
@@ -120,7 +143,7 @@ class Receiver:
         self.port = port
         self.url = "http://" + self.HOST + ":" + str(port) + self.PATH
 
-        server = make_server(self.HOST, port, self.app)
+        server = make_server(self.BIND_HOST, port, self.app)
         if blocking:
             print("Listening " + self.url)
             server.serve_forever()

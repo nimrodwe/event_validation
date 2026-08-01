@@ -1,104 +1,44 @@
-"""Helpers for the generated event catalog (manifest + send)."""
+"""Catalog helper — generate and load synthetic cases for tests."""
 
-import base64
 import json
+import shutil
+import tempfile
 from pathlib import Path
 
-from services.http_client import HttpClient
-from src.pipeline import Generator
-
-REQUIRED_CASE_TYPES = [
-    "positive",
-    "negative",
-    "boundary",
-    "retry",
-    "duplicate",
-    "replay",
-]
+from helpers.generator import Generator
 
 
-def generate_catalog(out_dir):
-    """Generate catalog under out_dir/generated and return that folder."""
-    return Generator().generate(out_dir)
+class Catalog:
+    """Owns catalog generate/load for tests."""
 
+    def __init__(self, generator=None):
+        self.generator = generator or Generator()
 
-def load_manifest(generated_dir):
-    path = Path(generated_dir) / "manifest.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+    def generate(self, out_dir):
+        """Build a fresh synthetic catalog; returns folder with events.json + manifest.json."""
+        return self.generator.generate(out_dir)
 
+    def load_manifest(self, generated_dir):
+        path = Path(generated_dir) / "manifest.json"
+        return json.loads(path.read_text(encoding="utf-8"))
 
-def load_events(generated_dir):
-    path = Path(generated_dir) / "events.jsonl"
-    rows = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.strip():
-            rows.append(json.loads(line))
-    return rows
+    def load_events(self, generated_dir):
+        path = Path(generated_dir) / "events.json"
+        return json.loads(path.read_text(encoding="utf-8"))
 
+    def cases_of_type(self, manifest, case_type):
+        return [item for item in manifest if item.get("type") == case_type]
 
-def cases_of_type(manifest, case_type):
-    return [item for item in manifest if item.get("type") == case_type]
+    def make_with_events(self, out_dir):
+        generated_dir = self.generate(out_dir)
+        return generated_dir, self.load_manifest(generated_dir), self.load_events(generated_dir)
 
-
-def event_for_case(events, case_id):
-    for item in events:
-        if item.get("case_id") == case_id:
-            return item["event"]
-    return None
-
-
-def send_case(localhost, case_id, event, headers=None):
-    """POST one catalog event to localhost with optional delivery headers."""
-    try:
-        import allure
-        from allure_commons.types import AttachmentType
-
-        allure.attach(
-            json.dumps(event, indent=2),
-            name="event-" + str(case_id),
-            attachment_type=AttachmentType.JSON,
-        )
-        if headers:
-            allure.attach(
-                json.dumps(headers, indent=2),
-                name="headers-" + str(case_id),
-                attachment_type=AttachmentType.JSON,
-            )
-    except Exception:
-        pass
-
-    http = HttpClient(timeout=5, retries=3)
-    body = base64.b64encode(json.dumps(event).encode("utf-8"))
-    req_headers = {"X-Case-Id": case_id}
-    if headers:
-        req_headers.update(headers)
-    response = http.post(localhost.url, data=body, headers=req_headers)
-
-    try:
-        import allure
-        from allure_commons.types import AttachmentType
-
-        allure.attach(
-            "status=" + str(response.status_code) + "\n" + (response.text or ""),
-            name="response-" + str(case_id),
-            attachment_type=AttachmentType.TEXT,
-        )
-    except Exception:
-        pass
-
-    return response
-
-
-def read_received(localhost):
-    path = Path(localhost.out) / "events.jsonl"
-    if not path.exists():
-        return []
-    rows = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.strip():
-            rows.append(json.loads(line))
-    return rows
-
-
-def received_by_case_id(localhost, case_id):
-    return [row for row in read_received(localhost) if row.get("case_id") == case_id]
+    def cases(self, case_type, out_dir=None):
+        """Generate catalog, load into memory, delete the folder, return events + cases."""
+        cleanup = out_dir is None
+        if out_dir is None:
+            out_dir = Path(tempfile.mkdtemp())
+        generated_dir, manifest, events = self.make_with_events(out_dir)
+        cases = self.cases_of_type(manifest, case_type)
+        shutil.rmtree(out_dir if cleanup else generated_dir, ignore_errors=True)
+        return events, cases

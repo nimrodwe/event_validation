@@ -53,11 +53,3 @@ class LoggerHelper:
         logger.setLevel(logging.INFO)
         logger.propagate = False
         return logger
-
-
-def collect_logger():
-    return LoggerHelper.collect()
-
-
-def make_logger(name, level=logging.INFO):
-    return LoggerHelper(name, level).get()

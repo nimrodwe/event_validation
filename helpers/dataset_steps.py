@@ -3,7 +3,7 @@ import json
 import re
 
 from services.http_client import HttpClient
-from helpers.type_validation import Step
+from helpers.steps import Step
 
 
 class DatasetSteps(Step):
@@ -33,7 +33,7 @@ class DatasetSteps(Step):
 
         return matches
 
-    def send(self, row, localhost):
+    def send(self, row, localhost, case_id="NEG-DATASET"):
         """POST the validation dataset row to localhost."""
         self.log.info("POST " + localhost.url)
         self.log.info(json.dumps(row))
@@ -41,7 +41,7 @@ class DatasetSteps(Step):
         response = self.http.post(
             localhost.url,
             data=body,
-            headers={"X-Case-Id": "NEG-DATASET"},
+            headers={"X-Case-Id": case_id},
         )
         self.log.info("status=" + str(response.status_code))
         return response

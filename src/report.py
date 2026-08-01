@@ -1,23 +1,25 @@
-"""Report: write findings files + serve pytest-runs dashboard."""
+"""Report: write findings files + serve event-validation dashboard."""
 
 import csv
 import json
+import os
 import threading
 import time
 import webbrowser
 
-from flask import Flask, jsonify, render_template_string, request
+from flask import Flask, jsonify, render_template_string, request, send_from_directory
 from werkzeug.serving import make_server
 
-from src.ci_runs import load_ci_runs
-from src.config import OUT
-from src.run_log import clear_test_runs, load_test_runs
+from src.ci_runs import CI_RUNS
+from src.config import DATASET, OUT
+from src.run_log import TestRunStore
+from src.validate import Validator
 
 DASHBOARD_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Pytest Dashboard</title>
+  <title>Event Validation</title>
   <style>
     * { box-sizing: border-box; }
     body { font-family: system-ui, sans-serif; margin: 0; background: #0f172a; color: #e2e8f0; }
@@ -28,9 +30,54 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     h1 { margin: 0 0 .25rem; font-size: 1.5rem; }
     h2 { margin: 0; font-size: 1.1rem; color: #cbd5e1; }
     .sub { color: #94a3b8; font-size: .9rem; }
-    main { padding: 1.5rem 2rem; }
+    .status { display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; }
+    .stat {
+      font-size: .85rem; padding: .35rem .75rem; border-radius: 6px;
+      background: #0f172a; border: 1px solid #334155; color: #cbd5e1;
+    }
+    .stat strong { color: #38bdf8; }
+    main { padding: 1.5rem 2rem; display: grid; gap: 1.25rem; }
     .panel { background: #1e293b; border-radius: 10px; border: 1px solid #334155; overflow: hidden; }
     .panel-pad { padding: 1rem; }
+    .section-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+      margin-bottom: .75rem; flex-wrap: wrap;
+    }
+    .filters { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .filters input, .filters select {
+      background: #0f172a; color: #e2e8f0; border: 1px solid #475569; border-radius: 6px;
+      padding: .35rem .55rem; font-size: .85rem;
+    }
+    .item {
+      border: 1px solid #334155; border-radius: 8px; margin-bottom: .5rem; overflow: hidden;
+      background: #0f172a;
+    }
+    .item-head {
+      display: flex; gap: .75rem; flex-wrap: wrap; align-items: center;
+      padding: .65rem .9rem; cursor: pointer; background: #1e293b;
+      font-family: ui-monospace, monospace; font-size: .85rem;
+    }
+    .item-head:hover { background: #334155; }
+    .item-body { display: none; padding: .75rem 1rem 1rem; border-top: 1px solid #334155; }
+    .item.open .item-body { display: block; }
+    .item-body pre {
+      margin: 0; white-space: pre-wrap; word-break: break-word;
+      font-size: .8rem; color: #cbd5e1; background: #020617;
+      border: 1px solid #334155; border-radius: 6px; padding: .75rem;
+    }
+    .badge {
+      font-size: .72rem; padding: .12rem .45rem; border-radius: 999px;
+      border: 1px solid #475569; color: #cbd5e1;
+    }
+    .badge.cat { color: #fbbf24; border-color: #854d0e; }
+    .badge.rule { color: #7dd3fc; border-color: #075985; }
+    .badge.passed { color: #4ade80; border-color: #166534; }
+    .badge.failed { color: #f87171; border-color: #7f1d1d; }
+    .badge.skipped { color: #fbbf24; border-color: #854d0e; }
+    .badge.success { color: #4ade80; border-color: #166534; }
+    .badge.failure { color: #f87171; border-color: #7f1d1d; }
+    .badge.cancelled { color: #94a3b8; border-color: #475569; }
+    .badge.in_progress { color: #38bdf8; border-color: #075985; }
     .run {
       border: 1px solid #334155; border-radius: 8px; margin-bottom: .75rem; overflow: hidden;
       background: #0f172a;
@@ -42,13 +89,6 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     .run-head:hover { background: #334155; }
     .run-body { display: none; padding: .75rem 1rem 1rem; border-top: 1px solid #334155; }
     .run.open .run-body { display: block; }
-    .badge {
-      font-size: .75rem; padding: .15rem .5rem; border-radius: 999px;
-      border: 1px solid #475569; color: #cbd5e1;
-    }
-    .badge.passed { color: #4ade80; border-color: #166534; }
-    .badge.failed { color: #f87171; border-color: #7f1d1d; }
-    .badge.skipped { color: #fbbf24; border-color: #854d0e; }
     .test-block { margin: .75rem 0; }
     .test-title {
       display: flex; align-items: center; flex-wrap: wrap; gap: .35rem 1.25rem;
@@ -59,7 +99,14 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     .test-title::before { content: "▸ "; color: #64748b; font-size: .75rem; }
     .test-block.open .test-title::before { content: "▾ "; color: #38bdf8; }
     .test-name { color: #e2e8f0; }
-    .test-uuid { color: #94a3b8; font-size: .85rem; }
+    .test-uuid { color: #94a3b8; font-size: .85rem; margin-left: auto; }
+    .fail-summary {
+      margin: .35rem 0 .5rem; color: #fca5a5; font-family: ui-monospace, monospace;
+      font-size: .82rem; white-space: pre-wrap; word-break: break-word;
+      background: rgba(127, 29, 29, 0.35); border-left: 3px solid #f87171;
+      padding: .5rem .65rem; border-radius: 4px;
+    }
+    .fail-summary .fail-title { font-weight: 600; margin-bottom: .4rem; }
     .steps {
       display: none;
       font-family: ui-monospace, monospace; font-size: .78rem; line-height: 1.45;
@@ -67,82 +114,95 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       white-space: pre-wrap; color: #94a3b8;
     }
     .test-block.open .steps { display: block; }
+    /* Failed tests: keep error + data visible (error is above .steps). */
+    .test-block.failed .steps { display: block; }
     .steps .INFO { color: #7dd3fc; }
     .steps .WARNING { color: #fbbf24; }
     .steps .step-line.ERROR {
-      color: #fca5a5;
-      background: rgba(127, 29, 29, 0.35);
-      border-left: 3px solid #f87171;
-      padding: .35rem .5rem;
-      margin: .25rem 0;
-      border-radius: 4px;
+      color: #fca5a5; background: rgba(127, 29, 29, 0.35);
+      border-left: 3px solid #f87171; padding: .35rem .5rem; margin: 0 0 .6rem; border-radius: 4px;
     }
-    .steps .step-line.ERROR .ERROR { color: #fecaca; }
     .empty { color: #64748b; font-size: .9rem; }
-    .section-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: .75rem; }
+    .ci-meta { color: #94a3b8; font-size: .85rem; }
+    .ci-note { color: #64748b; font-size: .8rem; margin-top: .75rem; }
     button.btn {
       background: #0f172a; color: #e2e8f0; border: 1px solid #475569; border-radius: 6px;
       padding: .4rem .75rem; cursor: pointer; font-size: .85rem;
     }
     button.btn:hover { background: #334155; }
+    button.btn:disabled { opacity: .5; cursor: wait; }
     button.btn-danger { border-color: #7f1d1d; color: #fca5a5; }
     button.btn-danger:hover { background: #7f1d1d; color: #fff; }
-    button.btn-link {
+    button.btn-primary { border-color: #075985; color: #7dd3fc; }
+    button.btn-primary:hover { background: #075985; color: #fff; }
+    a.btn-link {
       display: inline-block; text-decoration: none; margin-right: .5rem; margin-top: .5rem;
+      background: #0f172a; color: #e2e8f0; border: 1px solid #475569; border-radius: 6px;
+      padding: .4rem .75rem; font-size: .85rem;
     }
-    .panel + .panel { margin-top: 1.25rem; }
-    .badge.success { color: #4ade80; border-color: #166534; }
-    .badge.failure { color: #f87171; border-color: #7f1d1d; }
-    .badge.cancelled { color: #94a3b8; border-color: #475569; }
-    .badge.in_progress { color: #38bdf8; border-color: #075985; }
-    .ci-meta { color: #94a3b8; font-size: .85rem; }
-    .ci-note { color: #64748b; font-size: .8rem; margin-top: .75rem; }
+    a.btn-link:hover { background: #334155; }
+    .actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .msg { color: #94a3b8; font-size: .8rem; min-height: 1.2em; }
   </style>
 </head>
 <body>
   <header>
     <div>
-      <h1>Pytest Dashboard</h1>
-      <div class="sub">Local pytest runs on top; GitHub Actions CI runs below</div>
+      <h1>Event Validation</h1>
+      <div class="sub">Pytest runs and CI</div>
     </div>
-    <button class="btn btn-danger" id="shutdown" type="button">Shut down server</button>
+    <div class="status">
+      <div class="actions">
+        <button class="btn btn-danger" id="btn-shutdown" type="button">Shut down</button>
+      </div>
+    </div>
   </header>
   <main>
     <section class="panel panel-pad">
       <div class="section-head">
         <h2>Pytest runs</h2>
-        <button class="btn btn-danger" id="clear-runs" type="button">Clear all runs</button>
+        <button class="btn btn-danger" id="btn-clear-runs" type="button">Clear all runs</button>
       </div>
-      <div id="runs"></div>
+      <div id="runs" class="empty">Loading…</div>
     </section>
     <section class="panel panel-pad">
       <div class="section-head">
-        <h2>Pytest CI runs</h2>
-        <button class="btn" id="refresh-ci" type="button">Refresh</button>
+        <div>
+          <h2>Pytest CI runs</h2>
+          <div class="sub">Data from GitHub Actions API → local <code>/api/ci-runs</code> (expand a run for the JSON payload)</div>
+        </div>
       </div>
-      <div id="ci-runs"></div>
+      <div id="ci-error" class="msg" style="color:#fca5a5"></div>
+      <div id="ci-runs" class="empty">Loading…</div>
     </section>
   </main>
   <script>
     let testRuns = {{ test_runs_json | safe }};
     let ciPayload = {{ ci_runs_json | safe }};
+    const openRuns = new Set();
+    const openTests = new Set();
+    const openCiRuns = new Set();
+
+    function esc(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
 
     function outcomeBadge(outcome) {
       const cls = outcome === 'passed' ? 'passed' : outcome === 'failed' ? 'failed' : 'skipped';
-      return `<span class="badge ${cls}">${outcome}</span>`;
+      return `<span class="badge ${cls}">${esc(outcome || '')}</span>`;
     }
 
     function niceDate(iso) {
       if (!iso) return 'Unknown date';
       const d = new Date(iso);
-      if (Number.isNaN(d.getTime())) return iso;
+      if (Number.isNaN(d.getTime())) return esc(iso);
       return d.toLocaleString(undefined, {
-        weekday: 'short',
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit'
+        weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
+        hour: 'numeric', minute: '2-digit'
       });
     }
 
@@ -150,46 +210,45 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       return (nodeid || '').split('::').pop() || nodeid || '';
     }
 
-    function testUuid(steps) {
-      for (const s of steps || []) {
+    function testUuid(test) {
+      if (test && test.uuid != null) {
+        return test.uuid === '' ? '(empty)' : String(test.uuid);
+      }
+      for (const s of (test && test.steps) || []) {
         const msg = (s.message || '').trim();
+        if (msg.startsWith('UUID ')) {
+          const value = msg.slice(5);
+          return value === '' ? '(empty)' : value;
+        }
         if (!msg.startsWith('{')) continue;
         try {
           const data = JSON.parse(msg);
-          if (data.properties && data.properties.UUID) return String(data.properties.UUID);
-          if (data.UUID) return String(data.UUID);
+          if (data.properties && data.properties.UUID != null) {
+            return data.properties.UUID === '' ? '(empty)' : String(data.properties.UUID);
+          }
+          if (data.UUID != null) return data.UUID === '' ? '(empty)' : String(data.UUID);
         } catch (err) {}
       }
       return '';
     }
 
-    function escapeHtml(text) {
-      return String(text).replace(/</g, '&lt;');
-    }
-
     function formatStepMessage(message) {
       const msg = (message || '').trim();
-      if (!msg.startsWith('{') && !msg.startsWith('[')) return escapeHtml(message || '');
-      try {
-        return escapeHtml(JSON.stringify(JSON.parse(msg), null, 2));
-      } catch (err) {
-        return escapeHtml(message || '');
-      }
+      if (!msg.startsWith('{') && !msg.startsWith('[')) return esc(message || '');
+      try { return esc(JSON.stringify(JSON.parse(msg), null, 2)); }
+      catch (err) { return esc(message || ''); }
     }
 
-    const openRuns = new Set();
-    const openTests = new Set();
-
-    function runKey(run) {
-      return run.run_id || run.started || '';
-    }
+    function runKey(run) { return run.run_id || run.started || ''; }
 
     function renderRuns() {
       const root = document.getElementById('runs');
       if (!testRuns.length) {
-        root.innerHTML = '<div class="empty">No pytest runs yet. Run: python -m pytest -v</div>';
+        root.className = 'empty';
+        root.textContent = 'No pytest runs yet. Run: python -m pytest -v';
         return;
       }
+      root.className = '';
       root.innerHTML = '';
       testRuns.forEach((run) => {
         const key = runKey(run);
@@ -205,66 +264,75 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           <span class="badge passed">${passed} passed</span>
           <span class="badge failed">${failed} failed</span>`;
         head.onclick = () => {
-          if (openRuns.has(key)) openRuns.delete(key);
-          else openRuns.add(key);
+          if (openRuns.has(key)) openRuns.delete(key); else openRuns.add(key);
           box.classList.toggle('open');
         };
-
         const body = document.createElement('div');
         body.className = 'run-body';
         (run.tests || []).forEach(t => {
           const testKey = key + '::' + (t.nodeid || '');
           const block = document.createElement('div');
           block.className = 'test-block' + (openTests.has(testKey) ? ' open' : '');
-          const name = escapeHtml(testName(t.nodeid));
-          const uuid = testUuid(t.steps);
-          const uuidHtml = uuid ? `<span class="test-uuid">${escapeHtml(uuid)}</span>` : '';
-          const lines = (t.steps || []).map(s =>
-            `<div class="step-line ${s.level}"><span class="${s.level}">[${s.level}]</span> ${formatStepMessage(s.message)}</div>`
-          ).join('') || '<div class="empty">No step logs</div>';
+          const uuid = testUuid(t);
+          const uuidHtml = uuid ? `<span class="test-uuid">${esc(uuid)}</span>` : '';
+          const stepList = t.steps || [];
+          const errSteps = stepList.filter(s => s.level === 'ERROR');
+          const dataSteps = stepList.filter(s => s.level !== 'ERROR');
+          const errStep = errSteps[0];
+          // Failed: API error + key/before/after ABOVE data. Data steps never include ERROR.
+          let errPreview = '';
+          if (t.outcome === 'failed' && errStep && errStep.message) {
+            const raw = String(errStep.message).trim();
+            const nl = raw.indexOf('\\n');
+            const head = nl === -1 ? raw : raw.slice(0, nl).trim();
+            const body = nl === -1 ? '' : raw.slice(nl + 1).trim();
+            errPreview =
+              `<div class="fail-summary">` +
+              `<div class="fail-title">${esc(head)}</div>` +
+              (body ? `<div>${esc(body)}</div>` : '') +
+              `</div>`;
+          }
+          const lines = (t.outcome === 'failed' ? dataSteps : stepList).map(s =>
+            `<div class="step-line ${esc(s.level)}"><span class="${esc(s.level)}">[${esc(s.level)}]</span> ${formatStepMessage(s.message)}</div>`
+          ).join('') || (t.outcome === 'failed' ? '' : '<div class="empty">No step logs</div>');
+          if (t.outcome === 'failed') {
+            block.classList.add('failed');
+            block.classList.add('open');
+            openTests.add(testKey);
+          }
           const title = document.createElement('div');
           title.className = 'test-title';
-          title.innerHTML = `${outcomeBadge(t.outcome)} <span class="test-name">${name}</span>${uuidHtml}`;
+          title.innerHTML = `${outcomeBadge(t.outcome)} <span class="test-name">${esc(testName(t.nodeid))}</span>${uuidHtml}`;
           title.onclick = () => {
-            if (openTests.has(testKey)) openTests.delete(testKey);
-            else openTests.add(testKey);
+            if (openTests.has(testKey)) openTests.delete(testKey); else openTests.add(testKey);
             block.classList.toggle('open');
           };
           const steps = document.createElement('div');
           steps.className = 'steps';
           steps.innerHTML = lines;
           block.appendChild(title);
-          block.appendChild(steps);
+          if (errPreview) {
+            const preview = document.createElement('div');
+            preview.innerHTML = errPreview;
+            block.appendChild(preview.firstChild);
+          }
+          if (lines) block.appendChild(steps);
           body.appendChild(block);
         });
-
         box.appendChild(head);
         box.appendChild(body);
         root.appendChild(box);
       });
     }
 
-    async function refreshLive() {
-      try {
-        await fetch('/api/presence', { method: 'POST' });
-        testRuns = await fetch('/api/test-runs').then(r => r.json());
-        renderRuns();
-      } catch (err) {
-        console.log('refresh failed', err);
-      }
-    }
-
-    const openCiRuns = new Set();
-
     function ciBadge(run) {
-      // Prefer conclusion once GitHub has finished the run.
       if (run.conclusion) {
         const c = run.conclusion;
         const cls = (c === 'success' || c === 'failure' || c === 'cancelled') ? c : 'skipped';
-        return `<span class="badge ${cls}">${escapeHtml(c)}</span>`;
+        return `<span class="badge ${cls}">${esc(c)}</span>`;
       }
       const st = run.status || 'queued';
-      return `<span class="badge in_progress">${escapeHtml(st)}</span>`;
+      return `<span class="badge in_progress">${esc(st)}</span>`;
     }
 
     function ciHasInProgress(payload) {
@@ -275,55 +343,98 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
     function renderCiRuns() {
       const root = document.getElementById('ci-runs');
+      const errEl = document.getElementById('ci-error');
+      errEl.textContent = (ciPayload && ciPayload.error) ? ciPayload.error : '';
+
       if (ciPayload && ciPayload.error && !(ciPayload.runs || []).length) {
-        root.innerHTML = `<div class="empty">${escapeHtml(ciPayload.error)}</div>`;
+        root.className = 'empty';
+        root.textContent = 'No CI runs loaded. Fix auth/network, then reload this page.';
         return;
       }
       const runs = (ciPayload && ciPayload.runs) || [];
       if (!runs.length) {
-        root.innerHTML = '<div class="empty">No CI runs yet. Push to main or run the workflow from Actions.</div>';
+        root.className = 'empty';
+        root.textContent = 'No CI runs yet. Push to main or run the workflow from Actions.';
         return;
       }
+      root.className = '';
       root.innerHTML = '';
+      if (ciPayload.actions_url) {
+        const src = document.createElement('div');
+        src.className = 'ci-meta';
+        src.style.marginBottom = '0.75rem';
+        src.innerHTML = `Workflow: <a class="btn-link" style="margin:0" href="${esc(ciPayload.actions_url)}" target="_blank" rel="noopener">Open workflow on GitHub</a>`;
+        root.appendChild(src);
+      }
       runs.forEach((run) => {
         const key = String(run.run_number || run.html_url || '');
         const box = document.createElement('div');
         box.className = 'run' + (openCiRuns.has(key) ? ' open' : '');
         const head = document.createElement('div');
         head.className = 'run-head';
+        const result = run.conclusion || run.status || 'unknown';
+        const actionsLink = run.html_url
+          ? `<a class="btn-link" style="margin:0 0 0 auto" href="${esc(run.html_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Actions run</a>`
+          : `<span class="test-uuid">${esc(result)}</span>`;
         head.innerHTML = `
-          <strong>#${escapeHtml(String(run.run_number || '?'))}</strong>
+          <strong>#${esc(String(run.run_number || '?'))}</strong>
           ${ciBadge(run)}
-          <span class="badge">${escapeHtml(run.event || '')}</span>
-          <span class="badge">${escapeHtml(run.head_branch || '')}</span>
-          <span class="ci-meta">${niceDate(run.created_at)}</span>`;
+          <span class="badge">${esc(run.event || '')}</span>
+          <span class="badge">${esc(run.head_branch || '')}</span>
+          <span class="ci-meta">${niceDate(run.created_at)}</span>
+          ${actionsLink}`;
         head.onclick = () => {
-          if (openCiRuns.has(key)) openCiRuns.delete(key);
-          else openCiRuns.add(key);
+          if (openCiRuns.has(key)) openCiRuns.delete(key); else openCiRuns.add(key);
           box.classList.toggle('open');
         };
-
         const body = document.createElement('div');
         body.className = 'run-body';
-        const title = escapeHtml(run.display_title || '');
-        const sha = escapeHtml(run.head_sha || '');
+        // Per-run Actions URL + Open Allure (downloads the Actions zip and serves it here).
         let links = '';
         if (run.html_url) {
-          links += `<a class="btn btn-link" href="${escapeHtml(run.html_url)}" target="_blank" rel="noopener">Open in Actions</a>`;
+          links += `<a class="btn-link" href="${esc(run.html_url)}" target="_blank" rel="noopener">This run on Actions</a>`;
+        }
+        if (run.id && (run.status === 'completed' || run.conclusion)) {
+          links += `<button type="button" class="btn btn-primary open-allure" data-run-id="${esc(String(run.id))}">Open Allure report</button>`;
         }
         if (run.allure_url) {
-          links += `<a class="btn btn-link" href="${escapeHtml(run.allure_url)}" target="_blank" rel="noopener">Allure report (latest)</a>`;
-        } else if (ciPayload.allure_pages_url) {
-          links += `<a class="btn btn-link" href="${escapeHtml(ciPayload.allure_pages_url)}" target="_blank" rel="noopener">Allure report (live site)</a>`;
+          links += `<a class="btn-link" href="${esc(run.allure_url)}" target="_blank" rel="noopener">Allure Pages (latest success)</a>`;
         }
+        const failHint = (run.conclusion === 'failure')
+          ? `<div class="sub" style="color:#fca5a5;margin:.35rem 0">Failed CI run — Actions for logs; Open Allure report uses this run's artifact zip.</div>`
+          : '';
         body.innerHTML = `
-          <div class="ci-meta">${title}</div>
-          <div class="ci-meta">SHA ${sha || '—'}</div>
-          ${links}
-          <p class="ci-note">Live Allure Pages always shows the latest deploy. For this run’s full snapshot, open Actions and download the allure-report artifact.</p>`;
-
+          <div class="ci-meta">${esc(run.display_title || '')}</div>
+          <div class="ci-meta">SHA ${esc(run.head_sha || '—')} · ${esc(result)}</div>
+          ${failHint}
+          <div class="actions" style="margin-top:.5rem">${links}</div>
+          <pre style="margin-top:.75rem;white-space:pre-wrap;word-break:break-word;font-size:.8rem;color:#cbd5e1;background:#020617;border:1px solid #334155;border-radius:6px;padding:.75rem">${esc(JSON.stringify(run, null, 2))}</pre>
+          <p class="ci-note">Open Allure report downloads that run's Actions artifact and serves it from this dashboard (no unzip/serve commands).</p>`;
         box.appendChild(head);
         box.appendChild(body);
+        body.querySelectorAll('button.open-allure').forEach(btn => {
+          btn.onclick = async (ev) => {
+            ev.stopPropagation();
+            const runId = btn.getAttribute('data-run-id');
+            const prev = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Loading Allure…';
+            try {
+              const res = await fetch('/api/ci-runs/' + encodeURIComponent(runId) + '/allure', { method: 'POST' });
+              const data = await res.json();
+              if (!data.ok) {
+                alert(data.error || 'Could not open Allure report');
+                return;
+              }
+              window.open(data.url, '_blank', 'noopener');
+            } catch (err) {
+              alert('Could not reach local dashboard Allure API');
+            } finally {
+              btn.disabled = false;
+              btn.textContent = prev;
+            }
+          };
+        });
         root.appendChild(box);
       });
     }
@@ -347,29 +458,39 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       scheduleCiRefresh();
     }
 
-    document.getElementById('clear-runs').onclick = async () => {
-      if (!confirm('Clear all pytest runs from the dashboard?')) return;
+    function renderAll() {
+      renderRuns();
+      renderCiRuns();
+    }
+
+    async function loadRuns() {
+      const r = await fetch('/api/test-runs');
+      testRuns = await r.json();
+    }
+
+    document.getElementById('btn-clear-runs').addEventListener('click', async () => {
       await fetch('/api/test-runs/clear', { method: 'POST' });
       testRuns = [];
       renderRuns();
-    };
+    });
+    document.getElementById('btn-shutdown').addEventListener('click', async () => {
+      await fetch('/api/shutdown', { method: 'POST' });
+      document.body.innerHTML = '<main class="panel-pad"><h1>Server shut down</h1><p class="sub">You can close this tab.</p></main>';
+    });
 
-    document.getElementById('refresh-ci').onclick = () => refreshCi(true);
-
-    document.getElementById('shutdown').onclick = async () => {
-      if (!confirm('Shut down the dashboard and local receiver?')) return;
+    async function presenceLoop() {
+      try { await fetch('/api/presence', { method: 'POST' }); } catch (e) {}
+      setTimeout(presenceLoop, 3000);
+    }
+    presenceLoop();
+    renderAll();
+    refreshCi(false);
+    setInterval(async () => {
       try {
-        await fetch('/api/shutdown', { method: 'POST' });
-      } catch (err) {}
-      document.body.innerHTML =
-        '<main style="padding:2rem"><h1>Server shut down</h1><p class="sub">You can close this tab.</p></main>';
-    };
-
-    renderRuns();
-    renderCiRuns();
-    refreshLive();
-    refreshCi(true);
-    setInterval(refreshLive, 2000);
+        await loadRuns();
+        renderRuns();
+      } catch (e) {}
+    }, 2000);
   </script>
 </body>
 </html>"""
@@ -414,16 +535,34 @@ class Report:
         if out_dir is None:
             out_dir = OUT
         self.out = out_dir
-        self.test_runs = []
         self.app = Flask(__name__)
         self._server = None
         self._closed = threading.Event()
         self._shutdown_hooks = []
         self._last_presence = 0.0
         self.app.add_url_rule("/", "home", self.home)
+        self.app.add_url_rule("/api/received", "received", self.api_received)
+        self.app.add_url_rule("/api/findings", "findings", self.api_findings)
+        self.app.add_url_rule("/api/validate", "validate", self.api_validate, methods=["POST"])
         self.app.add_url_rule("/api/test-runs", "test_runs", self.api_test_runs)
         self.app.add_url_rule("/api/test-runs/clear", "clear_runs", self.api_clear_test_runs, methods=["POST"])
         self.app.add_url_rule("/api/ci-runs", "ci_runs", self.api_ci_runs)
+        self.app.add_url_rule(
+            "/api/ci-runs/<run_id>/allure",
+            "ci_allure_prepare",
+            self.api_ci_allure_prepare,
+            methods=["POST"],
+        )
+        self.app.add_url_rule(
+            "/ci-allure/<run_id>/",
+            "ci_allure_index",
+            self.ci_allure_index,
+        )
+        self.app.add_url_rule(
+            "/ci-allure/<run_id>/<path:filename>",
+            "ci_allure_file",
+            self.ci_allure_file,
+        )
         self.app.add_url_rule("/api/presence", "presence_ping", self.api_presence_ping, methods=["POST"])
         self.app.add_url_rule("/api/presence", "presence_status", self.api_presence_status, methods=["GET"])
         self.app.add_url_rule("/api/shutdown", "shutdown", self.api_shutdown, methods=["POST"])
@@ -465,23 +604,85 @@ class Report:
         html = FINDINGS_REPORT_HTML.replace("{{ findings_json | safe }}", json.dumps(findings))
         (report_dir / "index.html").write_text(html, encoding="utf-8")
 
+    def _read_received(self, case_id=None):
+        path = self.out / "received" / "events.jsonl"
+        items = []
+        if path.exists():
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if line.strip() == "":
+                    continue
+                items.append(json.loads(line))
+        if case_id:
+            items = [item for item in items if str(item.get("case_id", "")) == case_id]
+        items.reverse()
+        return items
+
+    def _read_findings_payload(self):
+        findings_dir = self.out / "findings"
+        findings = []
+        summary = {}
+        findings_path = findings_dir / "findings.json"
+        summary_path = findings_dir / "summary.json"
+        if findings_path.exists():
+            findings = json.loads(findings_path.read_text(encoding="utf-8"))
+        if summary_path.exists():
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        elif findings:
+            summary = {"total": len(findings)}
+        return {"findings": findings, "summary": summary}
+
     def home(self):
         return render_template_string(
             DASHBOARD_HTML,
-            test_runs_json=json.dumps(self.test_runs),
-            ci_runs_json=json.dumps(load_ci_runs()),
+            test_runs_json=json.dumps(TestRunStore.load_runs()),
+            ci_runs_json=json.dumps(CI_RUNS.load()),
         )
 
+    def api_received(self):
+        case_id = request.args.get("case_id")
+        events = self._read_received(case_id=case_id)
+        return jsonify({"count": len(events), "events": events})
+
+    def api_findings(self):
+        return jsonify(self._read_findings_payload())
+
+    def api_validate(self):
+        validator = Validator()
+        findings = []
+        if DATASET.exists():
+            findings.extend(validator.validate_dataset())
+        findings.extend(validator.validate_received(self.out / "received" / "events.jsonl"))
+        self.write(findings)
+        return jsonify(self._read_findings_payload())
+
     def api_test_runs(self):
-        return jsonify(load_test_runs())
+        return jsonify(TestRunStore.load_runs())
 
     def api_clear_test_runs(self):
-        clear_test_runs()
+        TestRunStore.clear_runs()
         return jsonify({"ok": True})
 
     def api_ci_runs(self):
         force = request.args.get("refresh") in ("1", "true", "yes")
-        return jsonify(load_ci_runs(force=force))
+        return jsonify(CI_RUNS.load(force=force))
+
+    def api_ci_allure_prepare(self, run_id):
+        """Download that CI run's allure-report zip and cache it for local viewing."""
+        result = CI_RUNS.prepare_allure_report(run_id)
+        status = 200 if result.get("ok") else 400
+        return jsonify(result), status
+
+    def ci_allure_index(self, run_id):
+        folder = CI_RUNS.find_allure_index_dir(run_id)
+        if folder is None:
+            return jsonify({"ok": False, "error": "Allure report not loaded yet."}), 404
+        return send_from_directory(folder, "index.html")
+
+    def ci_allure_file(self, run_id, filename):
+        folder = CI_RUNS.find_allure_index_dir(run_id)
+        if folder is None:
+            return jsonify({"ok": False, "error": "Allure report not loaded yet."}), 404
+        return send_from_directory(folder, filename)
 
     def api_presence_ping(self):
         self._last_presence = time.time()
@@ -516,11 +717,12 @@ class Report:
         webbrowser.open(url)
 
     def serve(self, port=8080, open_browser=True, blocking=True):
-        self.test_runs = load_test_runs()
         url = "http://127.0.0.1:" + str(port)
+        # Docker sets BIND_HOST=0.0.0.0 so the Mac can reach published ports.
+        bind_host = os.environ.get("BIND_HOST", "127.0.0.1")
 
         self._closed.clear()
-        self._server = make_server("127.0.0.1", port, self.app)
+        self._server = make_server(bind_host, port, self.app)
 
         if open_browser:
             timer = threading.Timer(0.8, self.open_browser_later, [url])
