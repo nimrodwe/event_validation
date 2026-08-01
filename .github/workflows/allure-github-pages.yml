@@ -2,13 +2,10 @@ name: Allure → GitHub Pages
 run-name: "Allure → GitHub Pages (${{ github.event_name }} / ${{ github.ref_name }})"
 
 on:
-  # Any push (any branch) runs tests and updates the Allure GitHub Pages site.
   push:
-  # PRs: run tests + Allure artifact only (do not overwrite the live site).
   pull_request:
-  # Manual run from the Actions tab (any branch).
   workflow_dispatch:
-  # Daily at 22:00 Israel time (UTC+3) → 19:00 UTC. Cron is always UTC.
+  # Daily at 22:00 Israel time (UTC+3) → 19:00 UTC.
   schedule:
     - cron: "0 19 * * *"
 
@@ -18,14 +15,16 @@ permissions:
   id-token: write
   actions: read
 
+# Do not cancel in-progress publishes — every run must keep its /runs/<id>/ report.
 concurrency:
-  # One live Pages deploy at a time so every push can refresh the site cleanly.
   group: allure-pages-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'site' }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   test-and-report:
     runs-on: ubuntu-latest
+    outputs:
+      pytest_failed: ${{ steps.pytest.outcome == 'failure' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -70,6 +69,7 @@ jobs:
         run: python -m pytest -v --tb=short
 
       - name: Prepare Allure results history
+        if: always()
         run: |
           mkdir -p out/allure-results
           if [ -d out/allure-history ]; then
@@ -78,6 +78,7 @@ jobs:
           fi
 
       - name: Generate Allure HTML report
+        if: always()
         run: allure generate out/allure-results -o out/allure-report --clean
 
       - name: Save Allure history for next run
@@ -98,8 +99,20 @@ jobs:
           path: out/allure-report
           retention-days: 14
 
-      - name: Fetch previous per-run Pages history
-        if: always() && github.event_name != 'pull_request'
+  # Separate job so pytest failure never blocks publishing this run's Allure.
+  publish-allure:
+    name: Publish Allure (all branches)
+    needs: test-and-report
+    if: always() && needs.test-and-report.result != 'cancelled' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Allure report
+        uses: actions/download-artifact@v7
+        with:
+          name: allure-report
+          path: out/allure-report
+
+      - name: Fetch previous per-run history
         continue-on-error: true
         uses: actions/checkout@v6
         with:
@@ -107,8 +120,7 @@ jobs:
           path: prev-pages
           fetch-depth: 1
 
-      - name: Assemble Pages site (latest + per-run folders)
-        if: always() && github.event_name != 'pull_request'
+      - name: Assemble site (latest + /runs/<run_id>/)
         run: |
           set -euo pipefail
           SITE=out/pages-site
@@ -124,7 +136,6 @@ jobs:
           mkdir -p "$SITE/runs/$RID"
           cp -a out/allure-report/. "$SITE/runs/$RID/"
 
-          # Keep the newest 30 run folders (by numeric run id).
           mapfile -t KEEP < <(ls -1 "$SITE/runs" | sort -n | tail -n 30)
           for d in "$SITE/runs"/*; do
             [ -e "$d" ] || continue
@@ -136,7 +147,6 @@ jobs:
             if [ "$keep" -eq 0 ]; then rm -rf "$d"; fi
           done
 
-          # Latest report at site root (do not replace runs/).
           shopt -s dotglob nullglob
           for item in out/allure-report/*; do
             base=$(basename "$item")
@@ -145,17 +155,10 @@ jobs:
             cp -a "$item" "$SITE/"
           done
 
-          echo "Published this run at /runs/${RID}/"
-          ls -la "$SITE/runs" | head -n 40
+          echo "This run: /runs/${RID}/"
+          ls -1 "$SITE/runs" | tail -n 20
 
-      - name: Upload GitHub Pages artifact
-        if: always() && github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: out/pages-site
-
-      - name: Persist Pages tree on allure-pages branch
-        if: always() && github.event_name != 'pull_request'
+      - name: Push allure-pages branch (source of truth for every machine)
         run: |
           set -euo pipefail
           cd out/pages-site
@@ -164,25 +167,25 @@ jobs:
           git init
           git checkout -B allure-pages
           git add -A
-          git commit -m "Allure Pages for run ${{ github.run_id }}"
+          git commit -m "Allure for run ${{ github.run_id }} (${{ github.ref_name }})"
           git push --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git" allure-pages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Fail job if pytest failed
-        if: steps.pytest.outcome == 'failure'
-        run: |
-          echo "Pytest failed — Allure report was still generated."
-          exit 1
+      # Best-effort github.io deploy (may be blocked for non-default branches by
+      # environment rules). Per-run links use the allure-pages CDN and do not depend on this.
+      - name: Upload GitHub Pages artifact
+        continue-on-error: true
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: out/pages-site
 
   deploy-pages:
     name: Deploy to GitHub Pages
-    needs: test-and-report
-    if: >
-      always() &&
-      needs.test-and-report.result != 'cancelled' &&
-      github.event_name != 'pull_request'
+    needs: publish-allure
+    if: always() && needs.publish-allure.result == 'success' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    continue-on-error: true
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -190,3 +193,16 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v5
+
+  # Fail the workflow if pytest failed (after Allure was published).
+  pytest-status:
+    name: Pytest status
+    needs: test-and-report
+    if: always() && needs.test-and-report.result != 'cancelled'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if pytest failed
+        if: needs.test-and-report.outputs.pytest_failed == 'true'
+        run: |
+          echo "Pytest failed — Allure for this run was still published."
+          exit 1

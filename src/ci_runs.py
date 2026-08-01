@@ -6,6 +6,7 @@ import requests
 
 from src.config import (
     ALLURE_PAGES_URL,
+    ALLURE_RUNS_CDN,
     GITHUB_ACTIONS_URL,
     GITHUB_REPO,
     GITHUB_WORKFLOW_FILE,
@@ -21,9 +22,10 @@ class CiRuns:
     Allure links are public GitHub Pages URLs (/runs/<run_id>/).
     """
 
-    CACHE_TTL_SECONDS = 30
-    CACHE_TTL_IN_PROGRESS = 5
-    CACHE_TTL_ERROR = 10
+    CACHE_TTL_SECONDS = 5
+    CACHE_TTL_IN_PROGRESS = 3
+    CACHE_TTL_ERROR = 5
+    DEFAULT_LIMIT = 30
 
     def __init__(self):
         self._cache = {"expires": 0.0, "payload": None}
@@ -82,14 +84,17 @@ class CiRuns:
             "runs": [],
             "error": None,
             "allure_pages_url": ALLURE_PAGES_URL,
+            "allure_runs_cdn": ALLURE_RUNS_CDN,
             "actions_url": GITHUB_ACTIONS_URL,
         }
 
-    def load(self, limit=10, force=False):
+    def load(self, limit=None, force=False):
         """
         Return {"runs": [...], "error": null|str, "allure_pages_url": str, "actions_url": str}.
-        Cached for ~30s to avoid burning GitHub API rate limits.
+        Short cache so every machine sees new CI runs quickly.
         """
+        if limit is None:
+            limit = self.DEFAULT_LIMIT
         now = time.time()
         if (
             not force
@@ -120,6 +125,7 @@ class CiRuns:
                         "runs": previous["runs"],
                         "error": err + " (showing last successful fetch)",
                         "allure_pages_url": ALLURE_PAGES_URL,
+                        "allure_runs_cdn": ALLURE_RUNS_CDN,
                         "actions_url": GITHUB_ACTIONS_URL,
                     }
                 else:
@@ -127,6 +133,7 @@ class CiRuns:
                         "runs": [],
                         "error": err,
                         "allure_pages_url": ALLURE_PAGES_URL,
+                        "allure_runs_cdn": ALLURE_RUNS_CDN,
                         "actions_url": GITHUB_ACTIONS_URL,
                     }
                 self._cache["payload"] = payload
@@ -153,6 +160,7 @@ class CiRuns:
                 "runs": runs,
                 "error": None,
                 "allure_pages_url": ALLURE_PAGES_URL,
+                "allure_runs_cdn": ALLURE_RUNS_CDN,
                 "actions_url": GITHUB_ACTIONS_URL,
             }
             ttl = self.CACHE_TTL_SECONDS
@@ -167,6 +175,7 @@ class CiRuns:
                     "runs": previous["runs"],
                     "error": err + " (showing last successful fetch)",
                     "allure_pages_url": ALLURE_PAGES_URL,
+                    "allure_runs_cdn": ALLURE_RUNS_CDN,
                     "actions_url": GITHUB_ACTIONS_URL,
                 }
             else:
@@ -174,6 +183,7 @@ class CiRuns:
                     "runs": [],
                     "error": err,
                     "allure_pages_url": ALLURE_PAGES_URL,
+                    "allure_runs_cdn": ALLURE_RUNS_CDN,
                     "actions_url": GITHUB_ACTIONS_URL,
                 }
             ttl = self.CACHE_TTL_ERROR
