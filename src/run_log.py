@@ -19,9 +19,10 @@ def event_uuid(payload):
 
 
 def allure_capture(level, message):
-    """Allure steps stay short: never dump full event JSON (UUID is a parameter)."""
+    """Mirror log lines into Allure; attach full JSON bodies (request/response events)."""
     try:
         import allure
+        from allure_commons.types import AttachmentType
     except ImportError:
         return
 
@@ -32,12 +33,30 @@ def allure_capture(level, message):
             try:
                 data = json.loads(stripped)
             except (json.JSONDecodeError, TypeError):
-                return
-            uuid = event_uuid(data)
-            if uuid is not None:
-                with allure.step("[" + level + "] sent event UUID " + str(uuid)):
+                with allure.step("[" + level + "] " + stripped[:240]):
                     pass
+                return
+
+            uuid = event_uuid(data)
+            pretty = json.dumps(data, indent=2, default=str, ensure_ascii=False)
+            if isinstance(data, dict) and "delivery_headers" in data and len(data) == 1:
+                title = "[" + level + "] delivery headers"
+                name = "delivery-headers.json"
+            elif uuid is not None or (
+                isinstance(data, dict) and ("properties" in data or "UUID" in data)
+            ):
+                title = "[" + level + "] event"
+                if uuid is not None:
+                    title = title + " UUID " + str(uuid)
+                name = "event.json"
+            else:
+                title = "[" + level + "] JSON body"
+                name = "body.json"
+
+            with allure.step(title):
+                allure.attach(pretty, name=name, attachment_type=AttachmentType.JSON)
             return
+
         with allure.step("[" + level + "] " + stripped[:240]):
             pass
     except Exception:

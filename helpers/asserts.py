@@ -425,6 +425,37 @@ class AssertHelper:
     def _sent_by_id(self, events):
         return {item["case_id"]: item["event"] for item in events}
 
+    def _attach_request(self, method, url, headers, event, case_id):
+        """Put the full HTTP request (including event body) into Allure."""
+        try:
+            import allure
+            from allure_commons.types import AttachmentType
+        except ImportError:
+            return
+        request = {
+            "method": method,
+            "url": url,
+            "headers": headers,
+            "case_id": case_id,
+            "body_encoding": "base64(application/json)",
+            "event": event,
+        }
+        pretty = json.dumps(request, indent=2, default=str, ensure_ascii=False)
+        try:
+            with allure.step(method + " request " + str(case_id)):
+                allure.attach(
+                    pretty,
+                    name="request.json",
+                    attachment_type=AttachmentType.JSON,
+                )
+                allure.attach(
+                    json.dumps(event, indent=2, default=str, ensure_ascii=False),
+                    name="request-event.json",
+                    attachment_type=AttachmentType.JSON,
+                )
+        except Exception:
+            pass
+
     def _post_case(self, receiver, case_id, sent, delivery_headers=None, record_uuid=True):
         """POST one event to the receiver API."""
         headers = {"X-Case-Id": case_id}
@@ -434,6 +465,7 @@ class AssertHelper:
         self._info("POST " + receiver.url + " case_id=" + str(case_id))
         if delivery_headers:
             self._info(json.dumps({"delivery_headers": delivery_headers}))
+        self._attach_request("POST", receiver.url, headers, sent, case_id)
         self._info(json.dumps(sent))
         body = base64.b64encode(json.dumps(sent).encode("utf-8"))
         response = self.http.post(receiver.url, data=body, headers=headers)
@@ -471,6 +503,7 @@ class AssertHelper:
         """GET /v1/events?case_id=... and assert that payload equals what we POSTed."""
         row = self._get_rows(receiver, case_id)[-1]
         received = row.get("event")
+        self._info(json.dumps(received))
         uuid = self.event_uuid(sent) or self.event_uuid(received) or "<missing UUID>"
         self.equal(
             received,
