@@ -48,8 +48,33 @@ class LocalStack:
         except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError):
             return False
 
+    def stop_existing(self):
+        """Stop leftover dashboard on 8080 so git pull + relaunch loads new code."""
+        if not self.dashboard_up():
+            return
+        print("Stopping previous dashboard on " + LocalHost.DASHBOARD_URL + " …")
+        try:
+            req = urllib.request.Request(
+                LocalHost.DASHBOARD_URL + "/api/shutdown",
+                data=b"",
+                method="POST",
+            )
+            urllib.request.urlopen(req, timeout=3)
+        except (urllib.error.URLError, TimeoutError, OSError):
+            pass
+        for _ in range(50):
+            if not self.dashboard_up():
+                print("Previous dashboard stopped.")
+                return
+            time.sleep(0.1)
+        print(
+            "Warning: old dashboard may still own port 8080. "
+            "Click Shut down, or: lsof -ti tcp:8080 | xargs kill -9"
+        )
+
     def run(self, open_browser=True):
         """Run receiver + dashboard in this process until Shut down is clicked."""
+        self.stop_existing()
         receiver = connect_receiver(OUT / "received", port=LocalHost.RECEIVER_PORT)
         report = Report()
         report.add_shutdown_hook(receiver.disconnect)
@@ -64,22 +89,11 @@ class LocalStack:
 
     def ensure_running(self, open_browser=True):
         """
-        Make sure the local stack is up in a detached process.
+        Make sure the local stack is up in a detached process with current code.
 
-        Returns a LocalHost handle. Does not block — pytest can exit while
-        the dashboard stays open.
+        Always restarts an existing dashboard so git pull changes are picked up.
         """
-        if self.dashboard_up():
-            if open_browser and not self.browser_tab_active():
-                print("Dashboard already running — opening " + LocalHost.DASHBOARD_URL)
-                webbrowser.open(LocalHost.DASHBOARD_URL)
-            elif open_browser:
-                print(
-                    "Dashboard already open in a browser tab ("
-                    + LocalHost.DASHBOARD_URL
-                    + "). Refresh that tab if the UI looks stale."
-                )
-            return LocalHost()
+        self.stop_existing()
 
         OUT.mkdir(parents=True, exist_ok=True)
         log_path = OUT / "stack.log"

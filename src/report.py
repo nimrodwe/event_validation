@@ -558,6 +558,17 @@ class Report:
         self.app.add_url_rule("/api/presence", "presence_ping", self.api_presence_ping, methods=["POST"])
         self.app.add_url_rule("/api/presence", "presence_status", self.api_presence_status, methods=["GET"])
         self.app.add_url_rule("/api/shutdown", "shutdown", self.api_shutdown, methods=["POST"])
+        self.app.add_url_rule("/api/health", "health", self.api_health)
+
+    def api_health(self):
+        """Confirm this process uses the public catalog (not the old GitHub API)."""
+        return jsonify(
+            {
+                "ok": True,
+                "ci_source": "allure-pages/ci-runs.json",
+                "uses_github_api": False,
+            }
+        )
 
     def write(self, findings):
         """Write machine-readable findings + a static HTML drill-down report."""
