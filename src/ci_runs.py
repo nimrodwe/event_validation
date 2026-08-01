@@ -6,6 +6,7 @@ import requests
 
 from src.config import (
     ALLURE_PAGES_URL,
+    CI_RUNS_CATALOG_FALLBACK_URL,
     CI_RUNS_CATALOG_URL,
     GITHUB_ACTIONS_URL,
     OUT,
@@ -17,10 +18,11 @@ class CiRuns:
     """Dashboard CI panel data from public allure-pages/ci-runs.json.
 
     No GITHUB_TOKEN, no gh auth, no api.github.com (avoids anonymous 403 rate limits).
+    Same catalog URL on every machine — Windows and Mac should show the same runs.
     """
 
-    CACHE_TTL_SECONDS = 8
-    CACHE_TTL_ERROR = 5
+    CACHE_TTL_SECONDS = 5
+    CACHE_TTL_ERROR = 3
     DEFAULT_LIMIT = 30
 
     def __init__(self):
@@ -30,8 +32,10 @@ class CiRuns:
         return {
             "runs": [],
             "error": error,
+            "updated_at": "",
             "allure_pages_url": ALLURE_PAGES_URL,
             "actions_url": GITHUB_ACTIONS_URL,
+            "catalog_url": CI_RUNS_CATALOG_URL,
         }
 
     def _normalize(self, run):
@@ -57,6 +61,45 @@ class CiRuns:
         self._cache["expires"] = 0.0
         self._cache["payload"] = self._empty_payload()
 
+    def _fetch_catalog(self, force=False):
+        """GET catalog JSON; try primary then fallback. Always cache-bust when force."""
+        stamp = str(int(time.time() * 1000))
+        urls = [CI_RUNS_CATALOG_URL, CI_RUNS_CATALOG_FALLBACK_URL]
+        headers = {
+            "User-Agent": "event-validation-dashboard",
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache",
+        }
+        last_error = None
+        for base in urls:
+            url = base + ("?t=" + stamp if force else "")
+            try:
+                response = requests.get(url, headers=headers, timeout=15)
+            except requests.RequestException as exc:
+                last_error = str(exc)
+                continue
+            if response.status_code == 404:
+                last_error = "404"
+                continue
+            if response.status_code != 200:
+                last_error = "HTTP " + str(response.status_code)
+                continue
+            try:
+                return response.json(), None
+            except ValueError as exc:
+                last_error = str(exc)
+                continue
+        if last_error == "404":
+            return None, (
+                "CI catalog not published yet. Wait for the next workflow "
+                "Publish Allure job, then refresh."
+            )
+        return None, (
+            "Could not load public CI catalog ("
+            + (last_error or "unknown")
+            + "). Check network access to raw.githubusercontent.com."
+        )
+
     def load(self, limit=None, force=False):
         if limit is None:
             limit = self.DEFAULT_LIMIT
@@ -69,68 +112,32 @@ class CiRuns:
             return self._cache["payload"]
 
         previous = self._cache.get("payload")
-        url = CI_RUNS_CATALOG_URL
-        if force:
-            url = CI_RUNS_CATALOG_URL + "?t=" + str(int(now))
-
-        try:
-            response = requests.get(
-                url,
-                headers={
-                    "User-Agent": "event-validation-dashboard",
-                    "Cache-Control": "no-cache",
-                    "Pragma": "no-cache",
-                },
-                timeout=15,
-            )
-            if response.status_code == 404:
-                payload = self._empty_payload(
-                    "CI catalog not published yet. Wait for the next workflow "
-                    "Publish Allure job, then refresh."
-                )
-                self._cache["payload"] = payload
-                self._cache["expires"] = now + self.CACHE_TTL_ERROR
-                return payload
-
-            if response.status_code != 200:
-                err = (
-                    "Could not load public CI catalog (HTTP "
-                    + str(response.status_code)
-                    + "). Retry shortly."
-                )
-                if previous and previous.get("runs"):
-                    payload = dict(previous)
-                    payload["error"] = err + " (showing last fetch)"
-                else:
-                    payload = self._empty_payload(err)
-                self._cache["payload"] = payload
-                self._cache["expires"] = now + self.CACHE_TTL_ERROR
-                return payload
-
-            data = response.json()
-            raw_runs = data.get("runs") or []
-            runs = [self._normalize(run) for run in raw_runs[:limit]]
-            if runs:
-                runs[0]["allure_latest_url"] = ALLURE_PAGES_URL
-
-            payload = {
-                "runs": runs,
-                "error": None,
-                "allure_pages_url": ALLURE_PAGES_URL,
-                "actions_url": GITHUB_ACTIONS_URL,
-            }
-            ttl = self.CACHE_TTL_SECONDS
-        except (requests.RequestException, ValueError) as exc:
-            err = "Could not load public CI catalog: " + str(exc)
+        data, err = self._fetch_catalog(force=True)
+        if data is None:
             if previous and previous.get("runs"):
                 payload = dict(previous)
                 payload["error"] = err + " (showing last fetch)"
             else:
                 payload = self._empty_payload(err)
-            ttl = self.CACHE_TTL_ERROR
+            self._cache["payload"] = payload
+            self._cache["expires"] = now + self.CACHE_TTL_ERROR
+            return payload
 
+        raw_runs = data.get("runs") or []
+        runs = [self._normalize(run) for run in raw_runs[:limit]]
+        if runs:
+            runs[0]["allure_latest_url"] = ALLURE_PAGES_URL
+
+        payload = {
+            "runs": runs,
+            "error": None,
+            "updated_at": data.get("updated_at") or "",
+            "allure_pages_url": ALLURE_PAGES_URL,
+            "actions_url": GITHUB_ACTIONS_URL,
+            "catalog_url": CI_RUNS_CATALOG_URL,
+        }
         self._cache["payload"] = payload
-        self._cache["expires"] = now + ttl
+        self._cache["expires"] = now + self.CACHE_TTL_SECONDS
         return payload
 
     def allure_cache_dir(self, run_id):

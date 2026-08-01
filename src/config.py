@@ -18,10 +18,16 @@ ALLURE_PAGES_URL = "https://nimrodwe.github.io/event_validation/"
 # Per-run Allure HTML on GitHub Pages (correct text/html). Do not use jsDelivr
 # directory URLs — those open the CDN file browser, not the Allure SPA.
 # CI run list for the dashboard — raw file on allure-pages (no API, no token).
+# Prefer raw.githubusercontent (updates quickly). jsDelivr lags and is fallback only.
 CI_RUNS_CATALOG_URL = (
     "https://raw.githubusercontent.com/"
     + GITHUB_REPO
     + "/refs/heads/allure-pages/ci-runs.json"
+)
+CI_RUNS_CATALOG_FALLBACK_URL = (
+    "https://raw.githubusercontent.com/"
+    + GITHUB_REPO
+    + "/allure-pages/ci-runs.json"
 )
 GITHUB_ACTIONS_URL = (
     "https://github.com/"
