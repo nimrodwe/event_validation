@@ -13,7 +13,7 @@ on:
     - cron: "0 19 * * *"
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
   actions: read
@@ -98,12 +98,76 @@ jobs:
           path: out/allure-report
           retention-days: 14
 
+      - name: Fetch previous per-run Pages history
+        if: always() && github.event_name != 'pull_request'
+        continue-on-error: true
+        uses: actions/checkout@v6
+        with:
+          ref: allure-pages
+          path: prev-pages
+          fetch-depth: 1
+
+      - name: Assemble Pages site (latest + per-run folders)
+        if: always() && github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          SITE=out/pages-site
+          RID="${{ github.run_id }}"
+          rm -rf "$SITE"
+          mkdir -p "$SITE/runs"
+
+          if [ -d prev-pages/runs ]; then
+            cp -a prev-pages/runs/. "$SITE/runs/" || true
+          fi
+
+          rm -rf "$SITE/runs/$RID"
+          mkdir -p "$SITE/runs/$RID"
+          cp -a out/allure-report/. "$SITE/runs/$RID/"
+
+          # Keep the newest 30 run folders (by numeric run id).
+          mapfile -t KEEP < <(ls -1 "$SITE/runs" | sort -n | tail -n 30)
+          for d in "$SITE/runs"/*; do
+            [ -e "$d" ] || continue
+            base=$(basename "$d")
+            keep=0
+            for k in "${KEEP[@]:-}"; do
+              if [ "$base" = "$k" ]; then keep=1; break; fi
+            done
+            if [ "$keep" -eq 0 ]; then rm -rf "$d"; fi
+          done
+
+          # Latest report at site root (do not replace runs/).
+          shopt -s dotglob nullglob
+          for item in out/allure-report/*; do
+            base=$(basename "$item")
+            if [ "$base" = "runs" ]; then continue; fi
+            rm -rf "$SITE/$base"
+            cp -a "$item" "$SITE/"
+          done
+
+          echo "Published this run at /runs/${RID}/"
+          ls -la "$SITE/runs" | head -n 40
+
       - name: Upload GitHub Pages artifact
-        # Refresh the live site on every push / schedule / manual run (not on PRs).
-        if: github.event_name != 'pull_request'
+        if: always() && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v5
         with:
-          path: out/allure-report
+          path: out/pages-site
+
+      - name: Persist Pages tree on allure-pages branch
+        if: always() && github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          cd out/pages-site
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git init
+          git checkout -B allure-pages
+          git add -A
+          git commit -m "Allure Pages for run ${{ github.run_id }}"
+          git push --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git" allure-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Fail job if pytest failed
         if: steps.pytest.outcome == 'failure'

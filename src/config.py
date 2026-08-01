@@ -22,6 +22,13 @@ GITHUB_ACTIONS_URL = (
     + GITHUB_WORKFLOW_FILE
 )
 
+
+def allure_pages_run_url(run_id):
+    """Public Pages URL for one CI run's Allure report (no GitHub token)."""
+    if run_id is None or str(run_id).strip() == "":
+        return ""
+    return ALLURE_PAGES_URL.rstrip("/") + "/runs/" + str(run_id) + "/"
+
 GOLDEN = {
     99, 119, 139, 159, 179, 199, 219, 239, 259, 279, 299, 319, 339, 359,
     379, 399, 419, 439, 459, 479, 499, 519, 539, 3990, 3991, 3992,

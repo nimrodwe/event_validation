@@ -12,6 +12,7 @@ from src.config import (
     GITHUB_REPO,
     GITHUB_WORKFLOW_FILE,
     OUT,
+    allure_pages_run_url,
 )
 
 
@@ -85,8 +86,9 @@ class CiRuns:
             # Per-run Actions URL (unique for every CI run).
             "html_url": html_url,
             "display_title": run.get("display_title") or run.get("name") or "",
-            # Shared Pages site — only for the latest successful deploy.
-            "allure_url": ALLURE_PAGES_URL if is_latest_success else "",
+            # Public Pages Allure for this run id (and latest at site root).
+            "allure_url": allure_pages_run_url(run_id),
+            "allure_latest_url": ALLURE_PAGES_URL if is_latest_success else "",
         }
 
     def _error_message(self, status_code, body_text):
@@ -227,21 +229,20 @@ class CiRuns:
 
     def prepare_allure_report(self, run_id):
         """
-        Open the public GitHub Pages Allure site (no GitHub token required).
+        Public Pages URL for this CI run's Allure report (no GitHub token).
 
-        Actions artifact zips always need auth on GitHub's API, even for public
-        repos — so everyone uses the published Pages report instead.
+        CI publishes each run to /runs/<run_id>/ on GitHub Pages.
         """
-        del run_id  # per-run zips need a token; Pages is the shared public report
-        if not ALLURE_PAGES_URL:
+        url = allure_pages_run_url(run_id)
+        if not url:
             return {
                 "ok": False,
-                "error": "ALLURE_PAGES_URL is not configured in src/config.py",
+                "error": "Missing CI run id for Allure Pages URL",
             }
         return {
             "ok": True,
-            "url": ALLURE_PAGES_URL,
-            "source": "pages",
+            "url": url,
+            "source": "pages-run",
         }
 
 

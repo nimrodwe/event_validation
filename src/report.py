@@ -11,7 +11,7 @@ from flask import Flask, jsonify, render_template_string, request, send_from_dir
 from werkzeug.serving import make_server
 
 from src.ci_runs import CI_RUNS
-from src.config import DATASET, OUT
+from src.config import ALLURE_PAGES_URL, DATASET, OUT
 from src.run_log import clear_runs, load_runs
 from src.validate import Validator
 
@@ -171,6 +171,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           <h2>Pytest CI runs</h2>
           <div class="sub">Data from GitHub Actions API → local <code>/api/ci-runs</code> (expand a run for the JSON payload)</div>
         </div>
+        <a id="btn-allure-pages" class="btn btn-primary" href="{{ allure_pages_url }}" target="_blank" rel="noopener">Open Allure report</a>
       </div>
       <div id="ci-error" class="msg" style="color:#fca5a5"></div>
       <div id="ci-runs" class="empty">Loading…</div>
@@ -179,9 +180,14 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   <script>
     let testRuns = {{ test_runs_json | safe }};
     let ciPayload = {{ ci_runs_json | safe }};
+    const ALLURE_PAGES_URL = {{ allure_pages_url | tojson }};
     const openRuns = new Set();
     const openTests = new Set();
     const openCiRuns = new Set();
+
+    function allurePagesUrl() {
+      return (ciPayload && ciPayload.allure_pages_url) || ALLURE_PAGES_URL || '';
+    }
 
     function esc(s) {
       return String(s)
@@ -345,17 +351,27 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     function renderCiRuns() {
       const root = document.getElementById('ci-runs');
       const errEl = document.getElementById('ci-error');
+      const allureBtn = document.getElementById('btn-allure-pages');
+      const pagesUrl = allurePagesUrl();
       errEl.textContent = (ciPayload && ciPayload.error) ? ciPayload.error : '';
+      if (allureBtn && pagesUrl) {
+        allureBtn.href = pagesUrl;
+        allureBtn.style.display = '';
+      } else if (allureBtn) {
+        allureBtn.style.display = 'none';
+      }
 
       if (ciPayload && ciPayload.error && !(ciPayload.runs || []).length) {
         root.className = 'empty';
-        root.textContent = 'No CI runs loaded. Fix auth/network, then reload this page.';
+        root.textContent = pagesUrl
+          ? 'CI run list unavailable (network/rate limit). Use Open Allure report above — it is public and needs no login.'
+          : 'No CI runs loaded. Check network, then reload this page.';
         return;
       }
       const runs = (ciPayload && ciPayload.runs) || [];
       if (!runs.length) {
         root.className = 'empty';
-        root.textContent = 'No CI runs yet. Push to main or run the workflow from Actions.';
+        root.textContent = 'No CI runs yet. Push or run the workflow from Actions. Open Allure report still works once Pages has a deploy.';
         return;
       }
       root.className = '';
@@ -390,16 +406,17 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         };
         const body = document.createElement('div');
         body.className = 'run-body';
-        // Per-run Actions URL + public Allure Pages (no GitHub token / gh auth).
+        // Per-run public Pages URL: /runs/<run_id>/ (no GitHub token).
+        const runAllure = run.allure_url || '';
         let links = '';
         if (run.html_url) {
           links += `<a class="btn-link" href="${esc(run.html_url)}" target="_blank" rel="noopener">This run on Actions</a>`;
         }
-        if (run.id && (run.status === 'completed' || run.conclusion)) {
-          links += `<button type="button" class="btn btn-primary open-allure" data-run-id="${esc(String(run.id))}">Open Allure report</button>`;
+        if (runAllure) {
+          links += `<a class="btn btn-primary" href="${esc(runAllure)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Open Allure report</a>`;
         }
         const failHint = (run.conclusion === 'failure')
-          ? `<div class="sub" style="color:#fca5a5;margin:.35rem 0">Failed CI run — use Actions for logs. Allure Pages shows the latest published report.</div>`
+          ? `<div class="sub" style="color:#fca5a5;margin:.35rem 0">Failed CI run — Actions for logs; Open Allure is this run's published report.</div>`
           : '';
         body.innerHTML = `
           <div class="ci-meta">${esc(run.display_title || '')}</div>
@@ -407,32 +424,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           ${failHint}
           <div class="actions" style="margin-top:.5rem">${links}</div>
           <pre style="margin-top:.75rem;white-space:pre-wrap;word-break:break-word;font-size:.8rem;color:#cbd5e1;background:#020617;border:1px solid #334155;border-radius:6px;padding:.75rem">${esc(JSON.stringify(run, null, 2))}</pre>
-          <p class="ci-note">Open Allure report opens the public GitHub Pages site (no login or GITHUB_TOKEN).</p>`;
+          <p class="ci-note">Open Allure report opens this run's public Pages URL (<code>/runs/&lt;run_id&gt;/</code>) — no login.</p>`;
         box.appendChild(head);
         box.appendChild(body);
-        body.querySelectorAll('button.open-allure').forEach(btn => {
-          btn.onclick = async (ev) => {
-            ev.stopPropagation();
-            const runId = btn.getAttribute('data-run-id');
-            const prev = btn.textContent;
-            btn.disabled = true;
-            btn.textContent = 'Loading Allure…';
-            try {
-              const res = await fetch('/api/ci-runs/' + encodeURIComponent(runId) + '/allure', { method: 'POST' });
-              const data = await res.json();
-              if (!data.ok) {
-                alert(data.error || 'Could not open Allure report');
-                return;
-              }
-              window.open(data.url, '_blank', 'noopener');
-            } catch (err) {
-              alert('Could not reach local dashboard Allure API');
-            } finally {
-              btn.disabled = false;
-              btn.textContent = prev;
-            }
-          };
-        });
         root.appendChild(box);
       });
     }
@@ -634,6 +628,7 @@ class Report:
             DASHBOARD_HTML,
             test_runs_json=json.dumps(load_runs()),
             ci_runs_json=json.dumps(CI_RUNS.load()),
+            allure_pages_url=ALLURE_PAGES_URL,
         )
 
     def api_received(self):
