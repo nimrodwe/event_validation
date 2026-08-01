@@ -424,7 +424,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           ${failHint}
           <div class="actions" style="margin-top:.5rem">${links}</div>
           <pre style="margin-top:.75rem;white-space:pre-wrap;word-break:break-word;font-size:.8rem;color:#cbd5e1;background:#020617;border:1px solid #334155;border-radius:6px;padding:.75rem">${esc(JSON.stringify(run, null, 2))}</pre>
-          <p class="ci-note">Open Allure report opens this run's public CDN URL (allure-pages branch) — same on every machine, no login.</p>`;
+          <p class="ci-note">Open Allure report opens this run on GitHub Pages — same on every machine, no login.</p>`;
         box.appendChild(head);
         box.appendChild(body);
         root.appendChild(box);

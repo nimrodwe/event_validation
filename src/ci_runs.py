@@ -6,7 +6,6 @@ import requests
 
 from src.config import (
     ALLURE_PAGES_URL,
-    ALLURE_RUNS_CDN,
     CI_RUNS_CATALOG_URL,
     GITHUB_ACTIONS_URL,
     OUT,
@@ -32,12 +31,12 @@ class CiRuns:
             "runs": [],
             "error": error,
             "allure_pages_url": ALLURE_PAGES_URL,
-            "allure_runs_cdn": ALLURE_RUNS_CDN,
             "actions_url": GITHUB_ACTIONS_URL,
         }
 
     def _normalize(self, run):
         run_id = run.get("id")
+        # Always build github.io URLs — catalog may still store old jsDelivr links.
         return {
             "run_number": run.get("run_number"),
             "id": run_id,
@@ -50,7 +49,7 @@ class CiRuns:
             "updated_at": run.get("updated_at") or "",
             "html_url": run.get("html_url") or "",
             "display_title": run.get("display_title") or "",
-            "allure_url": run.get("allure_url") or allure_pages_run_url(run_id),
+            "allure_url": allure_pages_run_url(run_id),
             "allure_latest_url": "",
         }
 
@@ -118,7 +117,6 @@ class CiRuns:
                 "runs": runs,
                 "error": None,
                 "allure_pages_url": ALLURE_PAGES_URL,
-                "allure_runs_cdn": ALLURE_RUNS_CDN,
                 "actions_url": GITHUB_ACTIONS_URL,
             }
             ttl = self.CACHE_TTL_SECONDS

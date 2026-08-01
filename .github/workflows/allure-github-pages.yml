@@ -182,7 +182,8 @@ jobs:
           prev_path = Path("prev-pages/ci-runs.json")
           repo = os.environ["GITHUB_REPOSITORY"]
           rid = str(os.environ["GITHUB_RUN_ID"])
-          cdn = f"https://cdn.jsdelivr.net/gh/{repo}@allure-pages/"
+          # GitHub Pages serves real text/html; jsDelivr directory URLs show a file browser.
+          pages = f"https://{repo.split('/')[0]}.github.io/{repo.split('/', 1)[1]}/"
 
           by_id = {}
           if prev_path.is_file():
@@ -209,7 +210,7 @@ jobs:
               "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
               "html_url": f"https://github.com/{repo}/actions/runs/{rid}",
               "display_title": os.environ.get("GITHUB_WORKFLOW") or "Allure",
-              "allure_url": cdn.rstrip("/") + f"/runs/{rid}/",
+              "allure_url": pages.rstrip("/") + f"/runs/{rid}/",
           }
 
           # Seed any folder missing from catalog (older publishes).
@@ -228,8 +229,14 @@ jobs:
                   "updated_at": "",
                   "html_url": f"https://github.com/{repo}/actions/runs/{folder}",
                   "display_title": "Allure",
-                  "allure_url": cdn.rstrip("/") + f"/runs/{folder}/",
+                  "allure_url": pages.rstrip("/") + f"/runs/{folder}/",
               }
+
+          # Rewrite legacy jsDelivr allure_url values to GitHub Pages.
+          for row in by_id.values():
+              rid_key = str(row.get("id") or "")
+              if rid_key:
+                  row["allure_url"] = pages.rstrip("/") + f"/runs/{rid_key}/"
 
           def sort_key(row):
               try:
@@ -261,7 +268,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Best-effort github.io deploy (may be blocked for non-default branches by
-      # environment rules). Per-run links use the allure-pages CDN and do not depend on this.
+      # environment rules). Dashboard Open Allure links use github.io /runs/<id>/.
       - name: Upload GitHub Pages artifact
         continue-on-error: true
         uses: actions/upload-pages-artifact@v5
