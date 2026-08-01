@@ -71,9 +71,10 @@ jobs:
       - name: Inject force-fail test
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.force_fail }}
         run: |
-          python -c "open('tests/_ci_force_fail.py','w',encoding='utf-8').write('def test_forced_ci_failure():\n    assert False, \"Forced CI failure for dashboard check\"\n')"
-          echo "Injected tests/_ci_force_fail.py"
-          python -m py_compile tests/_ci_force_fail.py
+          python -c "open('tests/test_ci_force_fail.py','w',encoding='utf-8').write('def test_forced_ci_failure():\n    assert False, \"Forced CI failure for dashboard check\"\n')"
+          echo "Injected tests/test_ci_force_fail.py"
+          python -m py_compile tests/test_ci_force_fail.py
+          python -m pytest --collect-only -q tests/test_ci_force_fail.py
 
       - name: Run pytest
         id: pytest
