@@ -57,20 +57,14 @@ def pytest_runtest_setup(item):
         allure.dynamic.feature("Tests")
         allure.dynamic.story(item.name)
 
-    # Surface parametrize inputs (e.g. field match dicts) in the Allure test.
-    callspec = getattr(item, "callspec", None)
-    if callspec:
-        for key, value in callspec.params.items():
-            if isinstance(value, (dict, list)):
-                import json
+    # Allure description = what the test does (from the test docstring).
+    doc = (getattr(item, "function", None) and item.function.__doc__) or ""
+    doc = " ".join(str(doc).split())
+    if doc:
+        allure.dynamic.description(doc)
 
-                allure.attach(
-                    json.dumps(value, indent=2, default=str),
-                    name="param-" + str(key),
-                    attachment_type=allure.attachment_type.JSON,
-                )
-            else:
-                allure.dynamic.parameter(str(key), str(value))
+    # Event UUID is set in record_uuid as the main Allure parameter for sent events.
+    # Pytest/Allure will also show simple params like field=... for type cases.
 
 
 def pytest_runtest_logreport(report):
@@ -150,9 +144,14 @@ def initialize(localhost, step_log, request):
     AssertHelper.log = step_log
 
     def record_uuid(uuid):
-        """Persist the first UUID for this test and log it for step drill-down."""
+        """Persist the first UUID for this test; Allure parameters show UUID only."""
         if RUN_STORE.set_uuid(request.node.nodeid, uuid):
             step_log.info("UUID " + ("" if uuid is None else str(uuid)))
+        try:
+            if uuid is not None and str(uuid) != "":
+                allure.dynamic.parameter("UUID", str(uuid))
+        except Exception:
+            pass
 
     AssertHelper.record_uuid = record_uuid
     base = BaseClass(localhost, step_log)

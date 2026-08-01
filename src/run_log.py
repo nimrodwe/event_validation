@@ -26,27 +26,39 @@ class StepLogHandler(logging.Handler):
         self._allure_capture(record.levelname, message)
 
     @staticmethod
+    def _event_uuid(payload):
+        if not isinstance(payload, dict):
+            return None
+        if "UUID" in payload:
+            return payload.get("UUID")
+        props = payload.get("properties")
+        if isinstance(props, dict) and "UUID" in props:
+            return props.get("UUID")
+        return None
+
+    @staticmethod
     def _allure_capture(level, message):
+        """Allure steps stay short: never dump full event JSON (UUID is a parameter)."""
         try:
             import allure
-            from allure_commons.types import AttachmentType
         except ImportError:
             return
 
         text = message if message is not None else ""
         stripped = text.strip()
-        title = level + " log"
         try:
             if stripped.startswith("{") or stripped.startswith("["):
                 try:
-                    pretty = json.dumps(json.loads(stripped), indent=2)
+                    data = json.loads(stripped)
                 except (json.JSONDecodeError, TypeError):
-                    pretty = stripped
-                allure.attach(pretty, name=title, attachment_type=AttachmentType.JSON)
-            else:
-                with allure.step("[" + level + "] " + stripped[:240]):
-                    if len(stripped) > 240:
-                        allure.attach(stripped, name=title, attachment_type=AttachmentType.TEXT)
+                    return
+                uuid = StepLogHandler._event_uuid(data)
+                if uuid is not None:
+                    with allure.step("[" + level + "] sent event UUID " + str(uuid)):
+                        pass
+                return
+            with allure.step("[" + level + "] " + stripped[:240]):
+                pass
         except Exception:
             pass
 

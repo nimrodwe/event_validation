@@ -4,28 +4,20 @@ from helpers.asserts import AssertHelper
 
 
 def test_positives(initialize, catalog_receiver):
-    """POS cases: POST → GET → keys/values unchanged."""
-
-    # step 1:
-    # generateing events.
-
-
-    # step 2:
-    # getting the events and positives from the catalog
+    """
+    Sends each positive catalog event to the local receiver, then GETs it back
+    and checks the stored payload matches what was sent (round-trip).
+    """
     events, positives = initialize.catalog.cases("positive")
- 
-    # step 3:
-    # checking if the positives are in the manifest -> stop us if we did not create the positive case correclty / not pulled 
     AssertHelper.truthy(positives, "No positive cases in manifest")
-
-    # step 4:
-    # sending the events to the catalog receiver
-    
     AssertHelper.check_positives(catalog_receiver, positives, events)
 
 
 def test_negatives(initialize, catalog_receiver):
-    """NEG cases: POST → GET → same payload → target rule on received data."""
+    """
+    Sends each negative catalog event, confirms GET returns the same payload,
+    and checks the target validation rule fires on the received event.
+    """
     events, negatives = initialize.catalog.cases("negative")
     AssertHelper.truthy(negatives, "No negative cases in manifest")
     AssertHelper.check_negatives(
@@ -34,7 +26,10 @@ def test_negatives(initialize, catalog_receiver):
 
 
 def test_boundary(initialize, catalog_receiver):
-    """Boundary cases: POST → GET → same payload → boundary rules on received data."""
+    """
+    Sends boundary catalog events (edge values), confirms GET round-trip,
+    and checks boundary-specific rules such as token length.
+    """
     events, boundaries = initialize.catalog.cases("boundary")
     AssertHelper.check_boundary(
         catalog_receiver, initialize.validator, boundaries, events
@@ -42,13 +37,19 @@ def test_boundary(initialize, catalog_receiver):
 
 
 def test_retry(initialize, catalog_receiver):
-    """Retry pair: POST → GET → same payload → retry headers preserved."""
+    """
+    Sends the retry case pair with Idempotency-Key / X-Retry-Count headers,
+    confirms GET round-trip, and checks those headers were stored.
+    """
     events, retries = initialize.catalog.cases("retry")
     AssertHelper.check_retries(catalog_receiver, retries, events)
 
 
 def test_duplicates(initialize, catalog_receiver):
-    """Duplicates: POST → GET → same payload → DUP-NEAR on received rows."""
+    """
+    Sends the near-duplicate case pair, confirms GET round-trip for each,
+    and checks validator reports DUP-NEAR on the received rows.
+    """
     events, duplicates = initialize.catalog.cases("duplicate")
     AssertHelper.check_duplicates(
         catalog_receiver, initialize.validator, duplicates, events
@@ -56,6 +57,9 @@ def test_duplicates(initialize, catalog_receiver):
 
 
 def test_replay(initialize, catalog_receiver):
-    """Replay pair: POST → GET → same payload (both deliveries visible)."""
+    """
+    Sends the replay case pair (same logical delivery twice), confirms both
+    POSTs are accepted and GET returns each payload unchanged.
+    """
     events, replays = initialize.catalog.cases("replay")
     AssertHelper.check_replays(catalog_receiver, replays, events)
