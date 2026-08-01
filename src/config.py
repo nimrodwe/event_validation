@@ -23,7 +23,7 @@ ALLURE_RUNS_CDN = (
 CI_RUNS_CATALOG_URL = (
     "https://raw.githubusercontent.com/"
     + GITHUB_REPO
-    + "/allure-pages/ci-runs.json"
+    + "/refs/heads/allure-pages/ci-runs.json"
 )
 GITHUB_ACTIONS_URL = (
     "https://github.com/"
