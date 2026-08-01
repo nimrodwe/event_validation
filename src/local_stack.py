@@ -9,7 +9,7 @@ import urllib.request
 import webbrowser
 
 from src.config import OUT, ROOT
-from src.receiver import Receiver
+from src.receiver import connect as connect_receiver
 from src.report import Report
 
 
@@ -30,16 +30,14 @@ class LocalHost:
 class LocalStack:
     """Starts and checks the detached receiver + dashboard process."""
 
-    @staticmethod
-    def dashboard_up():
+    def dashboard_up(self):
         try:
             urllib.request.urlopen(LocalHost.DASHBOARD_URL + "/api/received", timeout=0.5)
             return True
         except (urllib.error.URLError, TimeoutError, OSError):
             return False
 
-    @staticmethod
-    def browser_tab_active():
+    def browser_tab_active(self):
         """True if an open dashboard tab has checked in recently."""
         try:
             with urllib.request.urlopen(
@@ -50,10 +48,9 @@ class LocalStack:
         except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError):
             return False
 
-    @classmethod
-    def run(cls, open_browser=True):
+    def run(self, open_browser=True):
         """Run receiver + dashboard in this process until Shut down is clicked."""
-        receiver = Receiver.connect(OUT / "received", port=LocalHost.RECEIVER_PORT)
+        receiver = connect_receiver(OUT / "received", port=LocalHost.RECEIVER_PORT)
         report = Report()
         report.add_shutdown_hook(receiver.disconnect)
         try:
@@ -65,16 +62,15 @@ class LocalStack:
         finally:
             receiver.disconnect()
 
-    @classmethod
-    def ensure_running(cls, open_browser=True):
+    def ensure_running(self, open_browser=True):
         """
         Make sure the local stack is up in a detached process.
 
         Returns a LocalHost handle. Does not block — pytest can exit while
         the dashboard stays open.
         """
-        if cls.dashboard_up():
-            if open_browser and not cls.browser_tab_active():
+        if self.dashboard_up():
+            if open_browser and not self.browser_tab_active():
                 print("Dashboard already running — opening " + LocalHost.DASHBOARD_URL)
                 webbrowser.open(LocalHost.DASHBOARD_URL)
             elif open_browser:
@@ -107,7 +103,7 @@ class LocalStack:
         log_file.close()
 
         for _ in range(50):
-            if cls.dashboard_up():
+            if self.dashboard_up():
                 break
             time.sleep(0.1)
         else:

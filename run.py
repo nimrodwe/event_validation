@@ -9,7 +9,7 @@ import sys
 from helpers.generator import Generator
 from src.config import OUT
 from src.pipeline import Sender
-from src.receiver import Receiver
+from src.receiver import Receiver, connect as connect_receiver
 from src.report import Report
 from src.validate import Validator
 
@@ -66,7 +66,7 @@ class App:
             shutil.rmtree(received_dir)
 
         self.generator.generate(OUT)
-        server = Receiver.connect(received_dir)
+        server = connect_receiver(received_dir)
 
         try:
             self.sender.send(OUT / "generated", server.port)
@@ -141,7 +141,7 @@ def main():
     if args.cmd == "stack":
         from src.local_stack import LocalStack
 
-        LocalStack.run(open_browser=not args.no_open)
+        LocalStack().run(open_browser=not args.no_open)
         return
 
     if args.cmd == "allure":

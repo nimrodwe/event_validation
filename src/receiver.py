@@ -33,32 +33,6 @@ class Receiver:
         self.app.add_url_rule(self.PATH, "receive", self.receive, methods=["POST"])
         self.app.add_url_rule(self.PATH, "list_events", self.list_events, methods=["GET"])
 
-    @staticmethod
-    def connect(out_dir=None, port=None):
-        """
-        Turn the receiver on and return it ready to use.
-
-        If out_dir is omitted, uses a temp folder (deleted on disconnect).
-        If port is omitted, picks a free port.
-        """
-        temp_out = out_dir is None
-        if temp_out:
-            out_dir = tempfile.mkdtemp(prefix="receiver-")
-
-        receiver = Receiver(out_dir)
-        receiver._temp_out = temp_out
-
-        if port is None:
-            port = Receiver.find_free_port()
-
-        try:
-            receiver._server = receiver.start(port)
-        except OSError:
-            port = Receiver.find_free_port()
-            receiver._server = receiver.start(port)
-
-        return receiver
-
     def disconnect(self):
         """Turn the receiver off (and delete temp folder if we created one)."""
         if self._server is not None:
@@ -66,15 +40,6 @@ class Receiver:
             self._server = None
         if self._temp_out and self.out.exists():
             shutil.rmtree(self.out, ignore_errors=True)
-
-    @staticmethod
-    def find_free_port():
-        """Ask the OS for any free port on this computer."""
-        sock = socket.socket()
-        sock.bind(("127.0.0.1", 0))
-        port = sock.getsockname()[1]
-        sock.close()
-        return port
 
     def receive(self):
         body = request.get_data()
@@ -153,3 +118,38 @@ class Receiver:
         thread.daemon = True
         thread.start()
         return server
+
+
+def find_free_port():
+    """Ask the OS for any free port on this computer."""
+    sock = socket.socket()
+    sock.bind(("127.0.0.1", 0))
+    port = sock.getsockname()[1]
+    sock.close()
+    return port
+
+
+def connect(out_dir=None, port=None):
+    """
+    Turn the receiver on and return it ready to use.
+
+    If out_dir is omitted, uses a temp folder (deleted on disconnect).
+    If port is omitted, picks a free port.
+    """
+    temp_out = out_dir is None
+    if temp_out:
+        out_dir = tempfile.mkdtemp(prefix="receiver-")
+
+    receiver = Receiver(out_dir)
+    receiver._temp_out = temp_out
+
+    if port is None:
+        port = find_free_port()
+
+    try:
+        receiver._server = receiver.start(port)
+    except OSError:
+        port = find_free_port()
+        receiver._server = receiver.start(port)
+
+    return receiver

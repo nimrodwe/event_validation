@@ -8,8 +8,8 @@ import pytest
 from helpers.asserts import AssertHelper
 from src.config import OUT
 from src.local_stack import LocalStack
-from src.receiver import Receiver
-from src.run_log import TestRunStore
+from src.receiver import connect as connect_receiver
+from src.run_log import TestRunStore, make_step_logger
 from tests.base_class import BaseClass
 
 ALLURE_RESULTS = OUT / "allure-results"
@@ -126,7 +126,7 @@ def _steps_for(nodeid):
 def step_log(request):
     """Logger that writes to the console and to the dashboard step list."""
     steps = _steps_for(request.node.nodeid)
-    logger = TestRunStore.make_step_logger(request.node.nodeid, steps)
+    logger = make_step_logger(request.node.nodeid, steps)
     yield logger
     RUN_STORE.save()
 
@@ -135,7 +135,7 @@ def step_log(request):
 def localhost():
     """Point tests at the local stack; stack stays up after pytest exits."""
     open_browser = os.environ.get("CI", "").lower() not in ("1", "true", "yes")
-    yield LocalStack.ensure_running(open_browser=open_browser)
+    yield LocalStack().ensure_running(open_browser=open_browser)
 
 
 @pytest.fixture
@@ -167,6 +167,6 @@ def initialize(localhost, step_log, request):
 @pytest.fixture
 def catalog_receiver(tmp_path):
     """Fresh receiver so catalog tests use current server code."""
-    server = Receiver.connect(tmp_path / "received")
+    server = connect_receiver(tmp_path / "received")
     yield server
     server.disconnect()

@@ -1,32 +1,36 @@
 """Parametrize case lists and ids for type tests."""
 
-from helpers.matches import FieldMatches
+from helpers import matches
 
 
 class TypeParams:
     """Cached field lists for @pytest.mark.parametrize (field name only in Allure)."""
 
-    POSITIVE_FIELDS = FieldMatches.positive_fields()
-    NEGATIVE_FIELDS = FieldMatches.negative_fields()
-    POSITIVE_FIELD_NAMES = [m["field"] for m in POSITIVE_FIELDS]
-    NEGATIVE_FIELD_NAMES = [m["field"] for m in NEGATIVE_FIELDS]
-    _POSITIVE_BY_FIELD = {m["field"]: m for m in POSITIVE_FIELDS}
-    _NEGATIVE_BY_FIELD = {m["field"]: m for m in NEGATIVE_FIELDS}
+    def __init__(self):
+        self.POSITIVE_FIELDS = matches.positive_fields()
+        self.NEGATIVE_FIELDS = matches.negative_fields()
+        self.POSITIVE_FIELD_NAMES = [m["field"] for m in self.POSITIVE_FIELDS]
+        self.NEGATIVE_FIELD_NAMES = [m["field"] for m in self.NEGATIVE_FIELDS]
+        self._positive_by_field = {m["field"]: m for m in self.POSITIVE_FIELDS}
+        self._negative_by_field = {m["field"]: m for m in self.NEGATIVE_FIELDS}
 
-    @classmethod
-    def positive_match(cls, field):
-        return cls._POSITIVE_BY_FIELD[field]
+    def positive_match(self, field):
+        return self._positive_by_field[field]
 
-    @classmethod
-    def negative_match(cls, field):
-        return cls._NEGATIVE_BY_FIELD[field]
+    def negative_match(self, field):
+        return self._negative_by_field[field]
+
+
+TypeParams = TypeParams()
 
 
 class ParamIds:
     """IDs shown next to parametrized test names (field string or match dict)."""
 
-    @staticmethod
-    def field_id(value):
+    def field_id(self, value):
         if isinstance(value, dict):
-            return FieldMatches.field_id(value)
+            return matches.field_id(value)
         return str(value)
+
+
+ParamIds = ParamIds()

@@ -2,12 +2,10 @@ name: Allure → GitHub Pages
 run-name: "Allure → GitHub Pages (${{ github.event_name }} / ${{ github.ref_name }})"
 
 on:
-  # Every push to main runs the full suite and publishes Allure to Pages.
+  # Any push (any branch) runs tests and updates the Allure GitHub Pages site.
   push:
-    branches: [main, master]
-  # PRs targeting main: run tests + Allure artifact (no Pages deploy).
+  # PRs: run tests + Allure artifact only (do not overwrite the live site).
   pull_request:
-    branches: [main, master]
   # Manual run from the Actions tab (any branch).
   workflow_dispatch:
   # Daily at 22:00 Israel time (UTC+3) → 19:00 UTC. Cron is always UTC.
@@ -21,7 +19,8 @@ permissions:
   actions: read
 
 concurrency:
-  group: allure-pages-${{ github.event.pull_request.number || github.ref }}
+  # One live Pages deploy at a time so every push can refresh the site cleanly.
+  group: allure-pages-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'site' }}
   cancel-in-progress: true
 
 jobs:
@@ -100,10 +99,8 @@ jobs:
           retention-days: 14
 
       - name: Upload GitHub Pages artifact
-        if: >
-          github.ref == 'refs/heads/main' ||
-          github.ref == 'refs/heads/master' ||
-          github.event_name == 'schedule'
+        # Refresh the live site on every push / schedule / manual run (not on PRs).
+        if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v5
         with:
           path: out/allure-report
@@ -120,11 +117,7 @@ jobs:
     if: >
       always() &&
       needs.test-and-report.result != 'cancelled' &&
-      (
-        github.ref == 'refs/heads/main' ||
-        github.ref == 'refs/heads/master' ||
-        github.event_name == 'schedule'
-      )
+      github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

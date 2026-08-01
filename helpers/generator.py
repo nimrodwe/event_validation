@@ -8,8 +8,7 @@ from src.config import OUT, INPUT_EVENT
 
 
 class Generator:
-    @staticmethod
-    def _add(events, manifest, case_id, event, case_type, verdict, rule, headers=None):
+    def _add(self, events, manifest, case_id, event, case_type, verdict, rule, headers=None):
         events.append({"case_id": case_id, "event": event})
         manifest.append({
             "case_id": case_id,

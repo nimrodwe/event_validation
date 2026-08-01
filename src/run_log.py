@@ -7,6 +7,76 @@ from datetime import datetime, timezone
 from src.config import TEST_RUNS
 
 
+def event_uuid(payload):
+    if not isinstance(payload, dict):
+        return None
+    if "UUID" in payload:
+        return payload.get("UUID")
+    props = payload.get("properties")
+    if isinstance(props, dict) and "UUID" in props:
+        return props.get("UUID")
+    return None
+
+
+def allure_capture(level, message):
+    """Allure steps stay short: never dump full event JSON (UUID is a parameter)."""
+    try:
+        import allure
+    except ImportError:
+        return
+
+    text = message if message is not None else ""
+    stripped = text.strip()
+    try:
+        if stripped.startswith("{") or stripped.startswith("["):
+            try:
+                data = json.loads(stripped)
+            except (json.JSONDecodeError, TypeError):
+                return
+            uuid = event_uuid(data)
+            if uuid is not None:
+                with allure.step("[" + level + "] sent event UUID " + str(uuid)):
+                    pass
+            return
+        with allure.step("[" + level + "] " + stripped[:240]):
+            pass
+    except Exception:
+        pass
+
+
+def load_runs(limit=20):
+    """Newest pytest runs first, for the dashboard."""
+    if not TEST_RUNS.exists():
+        return []
+
+    runs = []
+    for path in TEST_RUNS.glob("*.json"):
+        if path.name == "latest.json":
+            continue
+        try:
+            runs.append(json.loads(path.read_text(encoding="utf-8")))
+        except (json.JSONDecodeError, OSError):
+            continue
+
+    runs.sort(key=lambda r: r.get("started", ""), reverse=True)
+    return runs[:limit]
+
+
+def clear_runs():
+    """Delete all saved pytest run logs."""
+    if not TEST_RUNS.exists():
+        return
+    for path in TEST_RUNS.glob("*.json"):
+        path.unlink()
+
+
+def make_step_logger(name, steps):
+    """Logger that writes both to the console and to the run store steps list."""
+    from helpers.logger import LoggerHelper
+
+    return LoggerHelper(name).add_handler(StepLogHandler(steps)).get()
+
+
 class StepLogHandler(logging.Handler):
     """Send log records into the dashboard step list and into Allure."""
 
@@ -23,44 +93,7 @@ class StepLogHandler(logging.Handler):
                 "message": message,
             }
         )
-        self._allure_capture(record.levelname, message)
-
-    @staticmethod
-    def _event_uuid(payload):
-        if not isinstance(payload, dict):
-            return None
-        if "UUID" in payload:
-            return payload.get("UUID")
-        props = payload.get("properties")
-        if isinstance(props, dict) and "UUID" in props:
-            return props.get("UUID")
-        return None
-
-    @staticmethod
-    def _allure_capture(level, message):
-        """Allure steps stay short: never dump full event JSON (UUID is a parameter)."""
-        try:
-            import allure
-        except ImportError:
-            return
-
-        text = message if message is not None else ""
-        stripped = text.strip()
-        try:
-            if stripped.startswith("{") or stripped.startswith("["):
-                try:
-                    data = json.loads(stripped)
-                except (json.JSONDecodeError, TypeError):
-                    return
-                uuid = StepLogHandler._event_uuid(data)
-                if uuid is not None:
-                    with allure.step("[" + level + "] sent event UUID " + str(uuid)):
-                        pass
-                return
-            with allure.step("[" + level + "] " + stripped[:240]):
-                pass
-        except Exception:
-            pass
+        allure_capture(record.levelname, message)
 
 
 class TestRunStore:
@@ -138,35 +171,11 @@ class TestRunStore:
         }
         self.path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
-    @staticmethod
-    def load_runs(limit=20):
-        """Newest pytest runs first, for the dashboard."""
-        if not TEST_RUNS.exists():
-            return []
+    def load_runs(self, limit=20):
+        return load_runs(limit=limit)
 
-        runs = []
-        for path in TEST_RUNS.glob("*.json"):
-            if path.name == "latest.json":
-                continue
-            try:
-                runs.append(json.loads(path.read_text(encoding="utf-8")))
-            except (json.JSONDecodeError, OSError):
-                continue
+    def clear_runs(self):
+        clear_runs()
 
-        runs.sort(key=lambda r: r.get("started", ""), reverse=True)
-        return runs[:limit]
-
-    @staticmethod
-    def clear_runs():
-        """Delete all saved pytest run logs."""
-        if not TEST_RUNS.exists():
-            return
-        for path in TEST_RUNS.glob("*.json"):
-            path.unlink()
-
-    @staticmethod
-    def make_step_logger(name, steps):
-        """Logger that writes both to the console and to the run store steps list."""
-        from helpers.logger import LoggerHelper
-
-        return LoggerHelper(name).add_handler(StepLogHandler(steps)).get()
+    def make_step_logger(self, name, steps):
+        return make_step_logger(name, steps)

@@ -12,7 +12,7 @@ from werkzeug.serving import make_server
 
 from src.ci_runs import CI_RUNS
 from src.config import DATASET, OUT
-from src.run_log import TestRunStore
+from src.run_log import clear_runs, load_runs
 from src.validate import Validator
 
 DASHBOARD_HTML = """<!DOCTYPE html>
@@ -632,7 +632,7 @@ class Report:
     def home(self):
         return render_template_string(
             DASHBOARD_HTML,
-            test_runs_json=json.dumps(TestRunStore.load_runs()),
+            test_runs_json=json.dumps(load_runs()),
             ci_runs_json=json.dumps(CI_RUNS.load()),
         )
 
@@ -654,10 +654,10 @@ class Report:
         return jsonify(self._read_findings_payload())
 
     def api_test_runs(self):
-        return jsonify(TestRunStore.load_runs())
+        return jsonify(load_runs())
 
     def api_clear_test_runs(self):
-        TestRunStore.clear_runs()
+        clear_runs()
         return jsonify({"ok": True})
 
     def api_ci_runs(self):

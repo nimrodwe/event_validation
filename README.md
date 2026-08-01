@@ -69,4 +69,4 @@ Source is mounted at `/app`, so local edits show up in the container. To run tes
 
 ## CI
 
-GitHub Actions (`.github/workflows/allure-github-pages.yml`) runs the full pytest suite on push/PR to `main`, on a daily schedule, and via manual dispatch. It builds an Allure report; on `main` (and the schedule) that report is published to GitHub Pages. The job fails if pytest fails, but the report is still generated first.
+GitHub Actions (`.github/workflows/allure-github-pages.yml`) runs the full pytest suite on every push (any branch), on PRs, on a daily schedule, and via manual dispatch. It builds an Allure report and updates GitHub Pages on every push / schedule / manual run (PRs upload an artifact only so they do not overwrite the live site). The job fails if pytest fails, but the report is still generated and published first.

@@ -3,6 +3,25 @@
 import logging
 
 
+def quiet_logger(name="parametrize"):
+    """Quiet logger for building parametrize cases (no console spam)."""
+    logger = logging.getLogger(name)
+    logger.handlers.clear()
+    logger.addHandler(logging.NullHandler())
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+    return logger
+
+
+def type_line(match):
+    """Standard one-line field type message for tests/dashboard."""
+    return (
+        "field=" + match["field"]
+        + " actual=" + repr(match["actual"])
+        + " expected_type=" + match["expected_type"]
+    )
+
+
 class LoggerHelper:
     FORMAT = "[%(levelname)s] %(message)s"
 
@@ -35,21 +54,8 @@ class LoggerHelper:
     def warning(self, message):
         self.logger.warning(message)
 
-    @staticmethod
-    def type_line(match):
-        """Standard one-line field type message for tests/dashboard."""
-        return (
-            "field=" + match["field"]
-            + " actual=" + repr(match["actual"])
-            + " expected_type=" + match["expected_type"]
-        )
+    def type_line(self, match):
+        return type_line(match)
 
-    @staticmethod
-    def collect(name="parametrize"):
-        """Quiet logger for building parametrize cases (no console spam)."""
-        logger = logging.getLogger(name)
-        logger.handlers.clear()
-        logger.addHandler(logging.NullHandler())
-        logger.setLevel(logging.INFO)
-        logger.propagate = False
-        return logger
+    def collect(self, name="parametrize"):
+        return quiet_logger(name)
