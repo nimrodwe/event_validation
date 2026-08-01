@@ -364,7 +364,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       if (ciPayload && ciPayload.error && !(ciPayload.runs || []).length) {
         root.className = 'empty';
         root.textContent = pagesUrl
-          ? 'CI run list unavailable (network/rate limit). Use Open Allure report above — it is public and needs no login.'
+          ? 'CI run list unavailable (network/rate limit). Use Open Allure report above — public GitHub Pages, no login.'
           : 'No CI runs loaded. Check network, then reload this page.';
         return;
       }

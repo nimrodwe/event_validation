@@ -1,7 +1,5 @@
 """Fetch GitHub Actions workflow runs for the dashboard CI panel."""
 
-import os
-import subprocess
 import time
 
 import requests
@@ -17,7 +15,11 @@ from src.config import (
 
 
 class CiRuns:
-    """Loads and caches GitHub Actions runs for the dashboard CI panel."""
+    """Loads and caches GitHub Actions runs for the dashboard CI panel.
+
+    Uses anonymous public GitHub API only — no GITHUB_TOKEN / gh auth.
+    Allure links are public GitHub Pages URLs (/runs/<run_id>/).
+    """
 
     CACHE_TTL_SECONDS = 30
     CACHE_TTL_IN_PROGRESS = 5
@@ -26,41 +28,14 @@ class CiRuns:
     def __init__(self):
         self._cache = {"expires": 0.0, "payload": None}
 
-    def _gh_commands(self):
-        commands = ["gh"]
-        windir = os.environ.get("ProgramFiles", r"C:\Program Files")
-        commands.append(os.path.join(windir, "GitHub CLI", "gh.exe"))
-        return commands
-
-    def _token(self):
-        token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
-        if token:
-            return token.strip()
-        for gh_cmd in self._gh_commands():
-            try:
-                out = subprocess.check_output(
-                    [gh_cmd, "auth", "token"],
-                    text=True,
-                    timeout=5,
-                    stderr=subprocess.DEVNULL,
-                )
-                token = (out or "").strip()
-                if token:
-                    return token
-            except (OSError, subprocess.SubprocessError):
-                continue
-        return None
-
     def _headers(self):
-        headers = {
+        # Never attach Authorization. A bad/expired local gh token would break
+        # public API access that otherwise works without login.
+        return {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
             "User-Agent": "event-validation-dashboard",
         }
-        token = self._token()
-        if token:
-            headers["Authorization"] = "Bearer " + token
-        return headers
 
     def _normalize(self, run, *, is_latest_success):
         sha = run.get("head_sha") or ""
@@ -83,22 +58,18 @@ class CiRuns:
             "head_sha": sha[:7] if sha else "",
             "created_at": run.get("created_at") or "",
             "updated_at": run.get("updated_at") or "",
-            # Per-run Actions URL (unique for every CI run).
             "html_url": html_url,
             "display_title": run.get("display_title") or run.get("name") or "",
-            # Public Pages Allure for this run id (and latest at site root).
+            # Public Pages Allure for this exact run (no login).
             "allure_url": allure_pages_run_url(run_id),
             "allure_latest_url": ALLURE_PAGES_URL if is_latest_success else "",
         }
 
     def _error_message(self, status_code, body_text):
         if status_code == 403:
-            return (
-                "GitHub API HTTP 403 (rate limit). Wait a bit and refresh, "
-                "or optionally set GITHUB_TOKEN for a higher limit."
-            )
+            return "GitHub API rate limit (public). Wait a minute and refresh the page."
         if status_code == 401:
-            return "GitHub API HTTP 401 (bad GITHUB_TOKEN). Unset it to use public access."
+            return "GitHub API rejected the request. Retry shortly."
         detail = ""
         if body_text:
             detail = " — " + body_text.strip().replace("\n", " ")[:160]
@@ -228,11 +199,7 @@ class CiRuns:
         return None
 
     def prepare_allure_report(self, run_id):
-        """
-        Public Pages URL for this CI run's Allure report (no GitHub token).
-
-        CI publishes each run to /runs/<run_id>/ on GitHub Pages.
-        """
+        """Public Pages URL for this CI run's Allure report (no GitHub token)."""
         url = allure_pages_run_url(run_id)
         if not url:
             return {
