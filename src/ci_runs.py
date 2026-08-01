@@ -1,11 +1,8 @@
 """Fetch GitHub Actions workflow runs for the dashboard CI panel."""
 
-import io
 import os
-import shutil
 import subprocess
 import time
-import zipfile
 
 import requests
 
@@ -95,11 +92,11 @@ class CiRuns:
     def _error_message(self, status_code, body_text):
         if status_code == 403:
             return (
-                "GitHub API HTTP 403 (rate limit or auth). "
-                "Set GITHUB_TOKEN / GH_TOKEN, or run: gh auth login"
+                "GitHub API HTTP 403 (rate limit). Wait a bit and refresh, "
+                "or optionally set GITHUB_TOKEN for a higher limit."
             )
         if status_code == 401:
-            return "GitHub API HTTP 401 (bad token). Check GITHUB_TOKEN / GH_TOKEN."
+            return "GitHub API HTTP 401 (bad GITHUB_TOKEN). Unset it to use public access."
         detail = ""
         if body_text:
             detail = " — " + body_text.strip().replace("\n", " ")[:160]
@@ -230,103 +227,21 @@ class CiRuns:
 
     def prepare_allure_report(self, run_id):
         """
-        Download the allure-report Actions artifact for this run, unzip locally,
-        and return a dashboard URL to open it in the browser.
+        Open the public GitHub Pages Allure site (no GitHub token required).
+
+        Actions artifact zips always need auth on GitHub's API, even for public
+        repos — so everyone uses the published Pages report instead.
         """
-        run_id = str(run_id)
-        existing = self.find_allure_index_dir(run_id)
-        if existing is not None:
-            return {
-                "ok": True,
-                "url": "/ci-allure/" + run_id + "/",
-                "cached": True,
-            }
-
-        if not self._token():
+        del run_id  # per-run zips need a token; Pages is the shared public report
+        if not ALLURE_PAGES_URL:
             return {
                 "ok": False,
-                "error": (
-                    "GitHub auth required to download artifacts. "
-                    "Run: gh auth login (or set GITHUB_TOKEN)"
-                ),
+                "error": "ALLURE_PAGES_URL is not configured in src/config.py",
             }
-
-        list_url = (
-            "https://api.github.com/repos/"
-            + GITHUB_REPO
-            + "/actions/runs/"
-            + run_id
-            + "/artifacts"
-        )
-        try:
-            listed = requests.get(list_url, headers=self._headers(), timeout=30)
-        except requests.RequestException as exc:
-            return {"ok": False, "error": "Could not reach GitHub API: " + str(exc)}
-
-        if listed.status_code != 200:
-            return {
-                "ok": False,
-                "error": self._error_message(listed.status_code, listed.text),
-            }
-
-        artifacts = listed.json().get("artifacts") or []
-        chosen = None
-        for item in artifacts:
-            name = (item.get("name") or "").lower()
-            if name == "allure-report" or "allure" in name:
-                chosen = item
-                break
-        if chosen is None:
-            return {
-                "ok": False,
-                "error": "No allure-report artifact for this run (expired or not uploaded).",
-            }
-        if chosen.get("expired"):
-            return {"ok": False, "error": "Allure artifact for this run has expired."}
-
-        download_url = chosen.get("archive_download_url") or ""
-        if not download_url:
-            return {"ok": False, "error": "Artifact has no download URL."}
-
-        try:
-            downloaded = requests.get(
-                download_url,
-                headers=self._headers(),
-                timeout=120,
-                allow_redirects=True,
-            )
-        except requests.RequestException as exc:
-            return {"ok": False, "error": "Artifact download failed: " + str(exc)}
-
-        if downloaded.status_code != 200:
-            return {
-                "ok": False,
-                "error": self._error_message(downloaded.status_code, downloaded.text),
-            }
-
-        dest = self.allure_cache_dir(run_id)
-        if dest.exists():
-            shutil.rmtree(dest, ignore_errors=True)
-        dest.mkdir(parents=True, exist_ok=True)
-
-        try:
-            with zipfile.ZipFile(io.BytesIO(downloaded.content)) as archive:
-                archive.extractall(dest)
-        except zipfile.BadZipFile:
-            shutil.rmtree(dest, ignore_errors=True)
-            return {"ok": False, "error": "Downloaded artifact is not a valid zip."}
-
-        index_dir = self.find_allure_index_dir(run_id)
-        if index_dir is None:
-            return {
-                "ok": False,
-                "error": "Artifact unzipped but index.html was not found.",
-            }
-
         return {
             "ok": True,
-            "url": "/ci-allure/" + run_id + "/",
-            "cached": False,
+            "url": ALLURE_PAGES_URL,
+            "source": "pages",
         }
 
 

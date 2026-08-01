@@ -390,7 +390,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         };
         const body = document.createElement('div');
         body.className = 'run-body';
-        // Per-run Actions URL + Open Allure (downloads the Actions zip and serves it here).
+        // Per-run Actions URL + public Allure Pages (no GitHub token / gh auth).
         let links = '';
         if (run.html_url) {
           links += `<a class="btn-link" href="${esc(run.html_url)}" target="_blank" rel="noopener">This run on Actions</a>`;
@@ -399,7 +399,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           links += `<button type="button" class="btn btn-primary open-allure" data-run-id="${esc(String(run.id))}">Open Allure report</button>`;
         }
         const failHint = (run.conclusion === 'failure')
-          ? `<div class="sub" style="color:#fca5a5;margin:.35rem 0">Failed CI run — Actions for logs; Open Allure report uses this run's artifact zip.</div>`
+          ? `<div class="sub" style="color:#fca5a5;margin:.35rem 0">Failed CI run — use Actions for logs. Allure Pages shows the latest published report.</div>`
           : '';
         body.innerHTML = `
           <div class="ci-meta">${esc(run.display_title || '')}</div>
@@ -407,7 +407,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           ${failHint}
           <div class="actions" style="margin-top:.5rem">${links}</div>
           <pre style="margin-top:.75rem;white-space:pre-wrap;word-break:break-word;font-size:.8rem;color:#cbd5e1;background:#020617;border:1px solid #334155;border-radius:6px;padding:.75rem">${esc(JSON.stringify(run, null, 2))}</pre>
-          <p class="ci-note">Open Allure report downloads that run's Actions artifact and serves it from this dashboard (no unzip/serve commands).</p>`;
+          <p class="ci-note">Open Allure report opens the public GitHub Pages site (no login or GITHUB_TOKEN).</p>`;
         box.appendChild(head);
         box.appendChild(body);
         body.querySelectorAll('button.open-allure').forEach(btn => {
@@ -665,7 +665,7 @@ class Report:
         return jsonify(CI_RUNS.load(force=force))
 
     def api_ci_allure_prepare(self, run_id):
-        """Download that CI run's allure-report zip and cache it for local viewing."""
+        """Return the public Allure Pages URL (no GitHub token required)."""
         result = CI_RUNS.prepare_allure_report(run_id)
         status = 200 if result.get("ok") else 400
         return jsonify(result), status
