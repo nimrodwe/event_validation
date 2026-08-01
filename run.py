@@ -41,6 +41,18 @@ def run_allure():
     return code
 
 
+def run_docker(docker_args):
+    """Start Docker Desktop if needed, then run docker (default: compose up --build)."""
+    from src.docker_desktop import ensure_running
+
+    ensure_running()
+    if docker_args and docker_args[0] == "--":
+        docker_args = docker_args[1:]
+    argv = list(docker_args) if docker_args else ["compose", "up", "--build"]
+    print("Running: docker " + " ".join(argv))
+    return subprocess.call(["docker"] + argv)
+
+
 class App:
     def __init__(self):
         self.generator = Generator()
@@ -85,11 +97,17 @@ def main():
         "cmd",
         nargs="?",
         default="stack",
-        choices=["all", "gen", "validate", "serve", "dashboard", "stack", "allure"],
+        choices=["all", "gen", "validate", "serve", "dashboard", "stack", "allure", "docker"],
         help="Command to run (default: stack = dashboard + receiver)",
     )
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--no-open", action="store_true")
+    parser.add_argument(
+        "docker_args",
+        nargs=argparse.REMAINDER,
+        help="Args after 'docker' (default: compose up --build). Example: "
+        "python run.py docker -- compose --profile test run --rm test",
+    )
     args = parser.parse_args()
 
     app = App()
@@ -128,6 +146,9 @@ def main():
 
     if args.cmd == "allure":
         sys.exit(run_allure())
+
+    if args.cmd == "docker":
+        sys.exit(run_docker(args.docker_args))
 
     # cmd == all
     code = app.run_all()

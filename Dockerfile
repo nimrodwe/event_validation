@@ -7,8 +7,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     CI=true \
     BIND_HOST=0.0.0.0
 
-COPY docs/requirements.txt docs/requirements.txt
-RUN pip install --no-cache-dir -r docs/requirements.txt
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 

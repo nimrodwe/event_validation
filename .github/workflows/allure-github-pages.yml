@@ -36,7 +36,7 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
-          cache-dependency-path: docs/requirements.txt
+          cache-dependency-path: requirements.txt
 
       - name: Set up Java (Allure CLI)
         uses: actions/setup-java@v5
@@ -52,7 +52,7 @@ jobs:
           echo "/opt/allure-${ALLURE_VERSION}/bin" >> "$GITHUB_PATH"
 
       - name: Install Python dependencies
-        run: python -m pip install -r docs/requirements.txt
+        run: python -m pip install -r requirements.txt
 
       - name: Restore Allure history
         uses: actions/cache@v6
