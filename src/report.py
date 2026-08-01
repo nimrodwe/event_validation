@@ -169,7 +169,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       <div class="section-head">
         <div>
           <h2>Pytest CI runs</h2>
-          <div class="sub">Data from GitHub Actions API → local <code>/api/ci-runs</code> (expand a run for the JSON payload)</div>
+          <div class="sub">Public CI catalog from <code>allure-pages/ci-runs.json</code> (no GitHub login / API) — expand a run for details</div>
         </div>
         <a id="btn-allure-pages" class="btn btn-primary" href="{{ allure_pages_url }}" target="_blank" rel="noopener">Open Allure report</a>
       </div>
@@ -363,9 +363,9 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
       if (ciPayload && ciPayload.error && !(ciPayload.runs || []).length) {
         root.className = 'empty';
-        root.textContent = pagesUrl
-          ? 'CI run list unavailable (network/rate limit). Use Open Allure report above — public GitHub Pages, no login.'
-          : 'No CI runs loaded. Check network, then reload this page.';
+        root.textContent = (ciPayload && ciPayload.error)
+          ? String(ciPayload.error)
+          : 'No CI runs loaded yet.';
         return;
       }
       const runs = (ciPayload && ciPayload.runs) || [];
@@ -434,9 +434,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     let ciTimer = null;
     function scheduleCiRefresh() {
       if (ciTimer) clearInterval(ciTimer);
-      // Keep CI list near real-time on every machine (public GitHub API).
-      const ms = ciHasInProgress(ciPayload) ? 3000 : 5000;
-      ciTimer = setInterval(() => refreshCi(true), ms);
+      // Poll public catalog (no GitHub API rate limits).
+      ciTimer = setInterval(() => refreshCi(true), 10000);
     }
 
     async function refreshCi(force) {

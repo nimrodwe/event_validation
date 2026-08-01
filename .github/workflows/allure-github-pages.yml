@@ -25,6 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       pytest_failed: ${{ steps.pytest.outcome == 'failure' }}
+      pytest_conclusion: ${{ steps.pytest.outcome == 'failure' && 'failure' || 'success' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -157,6 +158,93 @@ jobs:
 
           echo "This run: /runs/${RID}/"
           ls -1 "$SITE/runs" | tail -n 20
+
+      - name: Write public CI catalog (ci-runs.json, no API auth needed)
+        env:
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_WORKFLOW: ${{ github.workflow }}
+          PYTEST_CONCLUSION: ${{ needs.test-and-report.outputs.pytest_conclusion }}
+        run: |
+          python <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          site = Path("out/pages-site")
+          runs_dir = site / "runs"
+          catalog_path = site / "ci-runs.json"
+          prev_path = Path("prev-pages/ci-runs.json")
+          repo = os.environ["GITHUB_REPOSITORY"]
+          rid = str(os.environ["GITHUB_RUN_ID"])
+          cdn = f"https://cdn.jsdelivr.net/gh/{repo}@allure-pages/"
+
+          by_id = {}
+          if prev_path.is_file():
+              try:
+                  for row in json.loads(prev_path.read_text(encoding="utf-8")).get("runs") or []:
+                      by_id[str(row["id"])] = row
+              except (json.JSONDecodeError, OSError, KeyError):
+                  pass
+
+          # Keep entries for folders that still exist.
+          existing = {p.name for p in runs_dir.iterdir() if p.is_dir()} if runs_dir.is_dir() else set()
+          by_id = {k: v for k, v in by_id.items() if k in existing}
+
+          conclusion = os.environ.get("PYTEST_CONCLUSION") or "success"
+          by_id[rid] = {
+              "id": int(rid),
+              "run_number": int(os.environ["GITHUB_RUN_NUMBER"]),
+              "status": "completed",
+              "conclusion": conclusion,
+              "event": os.environ.get("GITHUB_EVENT_NAME") or "",
+              "head_branch": os.environ.get("GITHUB_REF_NAME") or "",
+              "head_sha": (os.environ.get("GITHUB_SHA") or "")[:7],
+              "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "html_url": f"https://github.com/{repo}/actions/runs/{rid}",
+              "display_title": os.environ.get("GITHUB_WORKFLOW") or "Allure",
+              "allure_url": cdn.rstrip("/") + f"/runs/{rid}/",
+          }
+
+          # Seed any folder missing from catalog (older publishes).
+          for folder in existing:
+              if folder in by_id:
+                  continue
+              by_id[folder] = {
+                  "id": int(folder) if folder.isdigit() else folder,
+                  "run_number": None,
+                  "status": "completed",
+                  "conclusion": "",
+                  "event": "",
+                  "head_branch": "",
+                  "head_sha": "",
+                  "created_at": "",
+                  "updated_at": "",
+                  "html_url": f"https://github.com/{repo}/actions/runs/{folder}",
+                  "display_title": "Allure",
+                  "allure_url": cdn.rstrip("/") + f"/runs/{folder}/",
+              }
+
+          def sort_key(row):
+              try:
+                  return int(row["id"])
+              except (TypeError, ValueError):
+                  return 0
+
+          runs = sorted(by_id.values(), key=sort_key, reverse=True)[:30]
+          payload = {
+              "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "runs": runs,
+          }
+          catalog_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+          print(f"Wrote ci-runs.json with {len(runs)} runs")
+          PY
 
       - name: Push allure-pages branch (source of truth for every machine)
         run: |

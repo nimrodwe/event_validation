@@ -11,16 +11,19 @@ DATASET = DATA / "validation_dataset_intentionally_corrupted.json"
 EXPECTED_TYPES = DATA / "EventsSchema.json"
 TEST_RUNS = OUT / "test_runs"
 
-# GitHub Actions / Allure Pages (local dashboard CI panel)
+# GitHub Actions / Allure (local dashboard CI panel) — all public, no auth.
 GITHUB_REPO = "nimrodwe/event_validation"
 GITHUB_WORKFLOW_FILE = "allure-github-pages.yml"
-# Latest report (github.io). May lag on non-main if the Pages environment
-# only allows the default branch — per-run links use ALLURE_RUNS_CDN instead.
 ALLURE_PAGES_URL = "https://nimrodwe.github.io/event_validation/"
-# Public CDN over the allure-pages branch — works for every run/branch/machine
-# without GitHub login (updated when CI pushes that branch).
+# Per-run Allure HTML (jsDelivr over allure-pages branch).
 ALLURE_RUNS_CDN = (
     "https://cdn.jsdelivr.net/gh/" + GITHUB_REPO + "@allure-pages/"
+)
+# CI run list for the dashboard — raw file on allure-pages (no API, no token).
+CI_RUNS_CATALOG_URL = (
+    "https://raw.githubusercontent.com/"
+    + GITHUB_REPO
+    + "/allure-pages/ci-runs.json"
 )
 GITHUB_ACTIONS_URL = (
     "https://github.com/"
@@ -34,9 +37,8 @@ def allure_pages_run_url(run_id):
     """Public URL for one CI run's Allure report (no GitHub token)."""
     if run_id is None or str(run_id).strip() == "":
         return ""
-    # New run ids are new paths (no CDN stale-cache issue). Available as soon
-    # as the allure-pages branch push finishes — any machine can open it.
     return ALLURE_RUNS_CDN.rstrip("/") + "/runs/" + str(run_id) + "/"
+
 
 GOLDEN = {
     99, 119, 139, 159, 179, 199, 219, 239, 259, 279, 299, 319, 339, 359,
