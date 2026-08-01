@@ -61,8 +61,14 @@ class CiRuns:
         self._cache["expires"] = 0.0
         self._cache["payload"] = self._empty_payload()
 
+    def _catalog_sort_key(self, data):
+        """Prefer newest catalog (CDN edges can return stale copies)."""
+        updated = str((data or {}).get("updated_at") or "")
+        count = len((data or {}).get("runs") or [])
+        return (updated, count)
+
     def _fetch_catalog(self, force=False):
-        """GET catalog JSON; try primary then fallback. Always cache-bust when force."""
+        """GET catalog from both mirrors; keep the newest updated_at."""
         stamp = str(int(time.time() * 1000))
         urls = [CI_RUNS_CATALOG_URL, CI_RUNS_CATALOG_FALLBACK_URL]
         headers = {
@@ -71,8 +77,10 @@ class CiRuns:
             "Pragma": "no-cache",
         }
         last_error = None
+        best = None
         for base in urls:
-            url = base + ("?t=" + stamp if force else "")
+            # Always bust query string — raw CDN may ignore Cache-Control.
+            url = base + "?t=" + stamp
             try:
                 response = requests.get(url, headers=headers, timeout=15)
             except requests.RequestException as exc:
@@ -85,10 +93,14 @@ class CiRuns:
                 last_error = "HTTP " + str(response.status_code)
                 continue
             try:
-                return response.json(), None
+                data = response.json()
             except ValueError as exc:
                 last_error = str(exc)
                 continue
+            if best is None or self._catalog_sort_key(data) > self._catalog_sort_key(best):
+                best = data
+        if best is not None:
+            return best, None
         if last_error == "404":
             return None, (
                 "CI catalog not published yet. Wait for the next workflow "

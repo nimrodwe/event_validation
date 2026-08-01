@@ -22,16 +22,16 @@ ALLURE_RUNS_URL = (
     "https://raw.githack.com/" + GITHUB_REPO + "/allure-pages/"
 )
 # CI run list for the dashboard — raw file on allure-pages (no API, no token).
-# Prefer raw.githubusercontent (updates quickly). jsDelivr lags and is fallback only.
+# Prefer /allure-pages/… (fresher). The refs/heads/ CDN path often stays HIT/stale.
 CI_RUNS_CATALOG_URL = (
     "https://raw.githubusercontent.com/"
     + GITHUB_REPO
-    + "/refs/heads/allure-pages/ci-runs.json"
+    + "/allure-pages/ci-runs.json"
 )
 CI_RUNS_CATALOG_FALLBACK_URL = (
     "https://raw.githubusercontent.com/"
     + GITHUB_REPO
-    + "/allure-pages/ci-runs.json"
+    + "/refs/heads/allure-pages/ci-runs.json"
 )
 GITHUB_ACTIONS_URL = (
     "https://github.com/"
