@@ -397,9 +397,6 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         if (run.id && (run.status === 'completed' || run.conclusion)) {
           links += `<button type="button" class="btn btn-primary open-allure" data-run-id="${esc(String(run.id))}">Open Allure report</button>`;
         }
-        if (run.allure_url) {
-          links += `<a class="btn-link" href="${esc(run.allure_url)}" target="_blank" rel="noopener">Allure Pages (latest success)</a>`;
-        }
         const failHint = (run.conclusion === 'failure')
           ? `<div class="sub" style="color:#fca5a5;margin:.35rem 0">Failed CI run — Actions for logs; Open Allure report uses this run's artifact zip.</div>`
           : '';

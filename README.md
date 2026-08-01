@@ -18,8 +18,8 @@ python -m pip install -r docs/requirements.txt
 ## Dashboard
 
 ```bash
-python run.py              # opens http://127.0.0.1:8080
-python run.py stack        # dashboard + event receiver
+python run.py              # dashboard + receiver (http://127.0.0.1:8080)
+python run.py dashboard    # dashboard only
 ```
 
 ## Run all tests

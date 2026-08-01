@@ -72,7 +72,7 @@ class App:
             print("Pipeline complete — 26 golden defects found")
             print("")
             print("  Report: " + str(OUT / "report" / "index.html"))
-            print("  Dashboard: python run.py dashboard")
+            print("  Dashboard: python run.py")
             print("")
             return 0
         finally:
@@ -84,9 +84,9 @@ def main():
     parser.add_argument(
         "cmd",
         nargs="?",
-        default="dashboard",
+        default="stack",
         choices=["all", "gen", "validate", "serve", "dashboard", "stack", "allure"],
-        help="Command to run (default: dashboard)",
+        help="Command to run (default: stack = dashboard + receiver)",
     )
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--no-open", action="store_true")
