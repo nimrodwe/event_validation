@@ -57,29 +57,82 @@ class AssertHelper:
                 return repr(value)
         return repr(value)
 
-    def _attach_to_allure(self, message, details, data):
-        """Optional: put the same failure info into Allure."""
+    def _attach_allure_json(self, name, value):
+        """Attach JSON on the test itself so it shows in the Allure test body."""
         try:
             import allure
             from allure_commons.types import AttachmentType
-
-            allure.attach(message, name="Why it failed", attachment_type=AttachmentType.TEXT)
-
-            payload = {"summary": message.splitlines()[0] if message else ""}
-            for key, value in details:
-                payload[str(key)] = value
-            if data is not None:
-                payload["failed_data"] = data
+        except ImportError:
+            return
+        try:
             allure.attach(
-                json.dumps(payload, indent=2, default=str, ensure_ascii=False),
-                name="failure-details",
+                json.dumps(value, indent=2, default=str, ensure_ascii=False),
+                name=name,
                 attachment_type=AttachmentType.JSON,
             )
-            if data is not None:
-                kind = AttachmentType.JSON if isinstance(data, (dict, list)) else AttachmentType.TEXT
-                allure.attach(self._format(data), name="failed-data", attachment_type=kind)
         except Exception:
             pass
+
+    def _attach_allure_text(self, name, text):
+        try:
+            import allure
+            from allure_commons.types import AttachmentType
+        except ImportError:
+            return
+        try:
+            allure.attach(str(text), name=name, attachment_type=AttachmentType.TEXT)
+        except Exception:
+            pass
+
+    def _attach_tested_values(self, check, match, result):
+        """Show the field/value under test in the Allure test body (pass or fail)."""
+        actual = match.get("actual") if isinstance(match, dict) else None
+        payload = {
+            "check": check,
+            "result": result,
+            "field": match.get("field") if isinstance(match, dict) else None,
+            "actual_value": actual,
+            "actual_python_type": type(actual).__name__,
+            "expected_type": (
+                match.get("expected_type") if isinstance(match, dict) else None
+            ),
+        }
+        self._attach_allure_json("Tested values", payload)
+        try:
+            import allure
+
+            field = payload.get("field") or "?"
+            with allure.step(
+                "Tested "
+                + str(check)
+                + " field="
+                + str(field)
+                + " actual="
+                + self._short(actual)
+                + " expected_type="
+                + str(payload.get("expected_type"))
+                + " → "
+                + str(result)
+            ):
+                pass
+        except Exception:
+            pass
+
+    def _attach_to_allure(self, message, details, data):
+        """Failure attachments: Why it failed + structured details (as before)."""
+        self._attach_allure_text("Why it failed", message)
+
+        payload = {"summary": message.splitlines()[0] if message else ""}
+        for key, value in details:
+            payload[str(key)] = value
+        if data is not None:
+            payload["failed_data"] = data
+        self._attach_allure_json("failure-details", payload)
+        if data is not None:
+            if isinstance(data, (dict, list)):
+                self._attach_allure_json("failed-data", data)
+            else:
+                self._attach_allure_text("failed-data", self._format(data))
 
     def _fail(self, title, details, data=None):
         """Build a clear error and stop the test."""
@@ -372,8 +425,10 @@ class AssertHelper:
         expected_type = match.get("expected_type", "<unknown>")
         actual = match.get("actual")
         if steps.fits_type(actual, expected_type):
+            self._attach_tested_values("type_ok", match, "passed")
             self._log_type_check("type_ok", field, expected_type)
             return True
+        self._attach_tested_values("type_ok", match, "failed")
         if message is None:
             message = "Type check failed for field '" + str(field) + "'"
         self._fail(
@@ -398,8 +453,10 @@ class AssertHelper:
         expected_type = match.get("expected_type", "<unknown>")
         actual = match.get("actual")
         if not steps.fits_type(actual, expected_type):
+            self._attach_tested_values("type_bad", match, "passed")
             self._log_type_check("type_bad", field, expected_type)
             return True
+        self._attach_tested_values("type_bad", match, "failed")
         if message is None:
             message = (
                 "Expected a type mismatch for field '"
@@ -424,22 +481,6 @@ class AssertHelper:
 
     def _sent_by_id(self, events):
         return {item["case_id"]: item["event"] for item in events}
-
-    def _attach_allure_json(self, name, value):
-        """Attach JSON on the test itself so it shows in the Allure test body."""
-        try:
-            import allure
-            from allure_commons.types import AttachmentType
-        except ImportError:
-            return
-        try:
-            allure.attach(
-                json.dumps(value, indent=2, default=str, ensure_ascii=False),
-                name=name,
-                attachment_type=AttachmentType.JSON,
-            )
-        except Exception:
-            pass
 
     def _post_case(self, receiver, case_id, sent, delivery_headers=None, record_uuid=True):
         """POST one event to the receiver API."""
@@ -506,7 +547,7 @@ class AssertHelper:
             received,
             sent,
             "UUID " + str(uuid) + " GET API event must equal the event we sent",
-            data={"UUID": uuid},
+            data={"UUID": uuid, "case_id": case_id},
         )
         return received
 
