@@ -68,40 +68,7 @@ jobs:
         continue-on-error: true
         env:
           CI: "true"
-        run: |
-          # TEMP demo: corrupt GET payload so positives fail with a real data mismatch.
-          python - <<'PY'
-          from pathlib import Path
-          Path("ci_mismatch_plugin.py").write_text(
-              '''
-          import json
-          from flask import jsonify, request
-          from services.http_status import HttpStatus
-          from src.receiver import Receiver
-
-          _orig = Receiver.list_events
-
-          def list_events(self):
-              rows = self._stored_rows()
-              case_id = request.args.get("case_id")
-              if case_id:
-                  rows = [row for row in rows if row.get("case_id") == case_id]
-              rows = json.loads(json.dumps(rows))
-              for row in rows:
-                  event = row.get("event") or {}
-                  props = event.get("properties")
-                  if isinstance(props, dict) and props.get("UUID"):
-                      props["message"] = "INVALID_FROM_LOCALHOST"
-                      break
-              return jsonify({"events": rows}), HttpStatus.OK
-
-          Receiver.list_events = list_events
-          '''.lstrip(),
-              encoding="utf-8",
-          )
-          print("Loaded CI data-mismatch plugin (corrupts GET message)")
-          PY
-          python -m pytest -v --tb=short -p ci_mismatch_plugin
+        run: python -m pytest -v --tb=short
 
       - name: Prepare Allure results history
         run: |
