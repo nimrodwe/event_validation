@@ -10,11 +10,6 @@ on:
     branches: [main, master]
   # Manual run from the Actions tab (any branch).
   workflow_dispatch:
-    inputs:
-      force_fail:
-        description: "Force CI failure (dashboard check)"
-        type: boolean
-        default: false
   # Daily at 22:00 Israel time (UTC+3) → 19:00 UTC. Cron is always UTC.
   schedule:
     - cron: "0 19 * * *"
@@ -67,29 +62,6 @@ jobs:
           restore-keys: |
             allure-history-${{ github.ref_name }}-
             allure-history-
-
-      - name: Inject force-fail tests
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.force_fail }}
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          Path("tests/test_ci_force_fail.py").write_text(
-              "\n".join(
-                  [
-                      "def test_forced_ci_failure_one():",
-                      '    assert False, "Forced CI failure 1 for dashboard check"',
-                      "",
-                      "def test_forced_ci_failure_two():",
-                      '    assert False, "Forced CI failure 2 for dashboard check"',
-                      "",
-                  ]
-              ),
-              encoding="utf-8",
-          )
-          PY
-          echo "Injected tests/test_ci_force_fail.py (2 failing tests)"
-          python -m py_compile tests/test_ci_force_fail.py
-          python -m pytest --collect-only -q tests/test_ci_force_fail.py
 
       - name: Run pytest
         id: pytest

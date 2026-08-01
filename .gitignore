@@ -6,4 +6,3 @@ out/
 allure-results/
 allure-report/
 *.egg-info/
-tests/test_ci_force_fail.py
