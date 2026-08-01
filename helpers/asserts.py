@@ -425,34 +425,19 @@ class AssertHelper:
     def _sent_by_id(self, events):
         return {item["case_id"]: item["event"] for item in events}
 
-    def _attach_request(self, method, url, headers, event, case_id):
-        """Put the full HTTP request (including event body) into Allure."""
+    def _attach_allure_json(self, name, value):
+        """Attach JSON on the test itself so it shows in the Allure test body."""
         try:
             import allure
             from allure_commons.types import AttachmentType
         except ImportError:
             return
-        request = {
-            "method": method,
-            "url": url,
-            "headers": headers,
-            "case_id": case_id,
-            "body_encoding": "base64(application/json)",
-            "event": event,
-        }
-        pretty = json.dumps(request, indent=2, default=str, ensure_ascii=False)
         try:
-            with allure.step(method + " request " + str(case_id)):
-                allure.attach(
-                    pretty,
-                    name="request.json",
-                    attachment_type=AttachmentType.JSON,
-                )
-                allure.attach(
-                    json.dumps(event, indent=2, default=str, ensure_ascii=False),
-                    name="request-event.json",
-                    attachment_type=AttachmentType.JSON,
-                )
+            allure.attach(
+                json.dumps(value, indent=2, default=str, ensure_ascii=False),
+                name=name,
+                attachment_type=AttachmentType.JSON,
+            )
         except Exception:
             pass
 
@@ -465,7 +450,18 @@ class AssertHelper:
         self._info("POST " + receiver.url + " case_id=" + str(case_id))
         if delivery_headers:
             self._info(json.dumps({"delivery_headers": delivery_headers}))
-        self._attach_request("POST", receiver.url, headers, sent, case_id)
+        # Full event in Allure test-body attachments (does not modify source data files).
+        self._attach_allure_json(
+            "Request event (" + str(case_id) + ")",
+            {
+                "method": "POST",
+                "url": receiver.url,
+                "headers": headers,
+                "case_id": case_id,
+                "body_encoding": "base64(application/json)",
+                "event": sent,
+            },
+        )
         self._info(json.dumps(sent))
         body = base64.b64encode(json.dumps(sent).encode("utf-8"))
         response = self.http.post(receiver.url, data=body, headers=headers)
@@ -503,6 +499,7 @@ class AssertHelper:
         """GET /v1/events?case_id=... and assert that payload equals what we POSTed."""
         row = self._get_rows(receiver, case_id)[-1]
         received = row.get("event")
+        self._attach_allure_json("Received event (" + str(case_id) + ")", received)
         self._info(json.dumps(received))
         uuid = self.event_uuid(sent) or self.event_uuid(received) or "<missing UUID>"
         self.equal(
