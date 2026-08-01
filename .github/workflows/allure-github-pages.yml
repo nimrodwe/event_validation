@@ -10,6 +10,11 @@ on:
     branches: [main, master]
   # Manual run from the Actions tab (any branch).
   workflow_dispatch:
+    inputs:
+      force_fail:
+        description: "Force CI failure (dashboard check)"
+        type: boolean
+        default: false
   # Daily at 22:00 Israel time (UTC+3) → 19:00 UTC. Cron is always UTC.
   schedule:
     - cron: "0 19 * * *"
@@ -68,7 +73,12 @@ jobs:
         continue-on-error: true
         env:
           CI: "true"
-        run: python -m pytest -v --tb=short
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.force_fail }}" = "true" ]; then
+            echo "Forced CI failure for dashboard check"
+            exit 1
+          fi
+          python -m pytest -v --tb=short
 
       - name: Prepare Allure results history
         run: |
