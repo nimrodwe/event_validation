@@ -3,7 +3,7 @@
 **File:** `tests/test_data_types.py`  
 **Parametrize:** one pytest case per field in `TypeParams.POSITIVE_FIELDS`  
 **Data:** `synthetic_event_template.json` + `EventsSchema.json`  
-**Server:** not used
+**Server:** yes — POST→GET via `catalog_receiver`
 
 ---
 
@@ -14,13 +14,13 @@
 | Data source | Good synthetic event | Corrupted dataset row |
 | Expectation | Value **fits** schema type | Value **fails** schema type |
 | Parametrized? | Yes (many fields) | Yes (mismatch fields only) |
-| Hits localhost? | No | No |
+| Hits localhost? | Yes (POST→GET) | Yes (POST→GET) |
 
 ---
 
 ## High level
 
-For each property on the synthetic event that also exists in `EventsSchema`, assert the actual value matches the expected ClickHouse-style type (via `fits_type`). Values are **not** changed by the test.
+POST the synthetic event, GET it back and assert equality, then for each schema-mapped field assert the value fits the expected type.
 
 How the param list is built (at import time):
 

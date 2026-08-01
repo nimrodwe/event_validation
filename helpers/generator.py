@@ -24,7 +24,10 @@ class Generator:
         self._add(events, manifest, "POS-0001", copy.deepcopy(base), "positive", "valid", "NONE")
 
     def add_negatives(self, events, manifest, base):
-        """Broken fields — each targets a specific validation rule."""
+        """Broken fields — each targets a specific validation rule.
+
+        Keep the synthetic template UUID except NEG-UUID (must be empty for REQ-UUID).
+        """
         bad = copy.deepcopy(base)
         bad["properties"]["UUID"] = ""
         self._add(events, manifest, "NEG-UUID", bad, "negative", "invalid", "REQ-UUID")
@@ -43,32 +46,28 @@ class Generator:
         self._add(events, manifest, "NEG-XFIELD", bad, "negative", "invalid", "XFIELD-OS")
 
     def add_boundary(self, events, manifest, base):
-        """Edge values (time=0, token length short / at min)."""
+        """Edge values (time=0, token length short / at min). UUID stays from template."""
         event = copy.deepcopy(base)
         event["properties"]["time"] = 0
         self._add(events, manifest, "BND-0001", event, "boundary", "valid", "NONE")
 
         short = copy.deepcopy(base)
-        short["properties"]["UUID"] = "BNDTOKENS00000000000000000000001"
         short["properties"]["Appdome fusion app token"] = "x" * 29
         self._add(events, manifest, "BND-TOKEN-SHORT", short, "boundary", "invalid", "FMT")
 
         edge = copy.deepcopy(base)
-        edge["properties"]["UUID"] = "BNDTOKENS00000000000000000000002"
         edge["properties"]["Appdome fusion app token"] = "x" * 30
         self._add(events, manifest, "BND-TOKEN-EDGE", edge, "boundary", "valid", "NONE")
 
     def add_duplicates(self, events, manifest, base):
-        """Two near-identical deliveries — expect DUP-NEAR."""
+        """Two near-identical deliveries — expect DUP-NEAR. Same template UUID."""
         dup = copy.deepcopy(base)
-        dup["properties"]["UUID"] = "DUP0000000000000000000000000001"
         self._add(events, manifest, "DUP-0001", copy.deepcopy(dup), "duplicate", "valid", "NONE")
         self._add(events, manifest, "DUP-0002", copy.deepcopy(dup), "duplicate", "valid", "NONE")
 
     def add_retries(self, events, manifest, base):
-        """Same payload twice with retry headers."""
+        """Same template payload twice with retry headers."""
         event = copy.deepcopy(base)
-        event["properties"]["UUID"] = "RTY1"
         self._add(
             events,
             manifest,
@@ -91,9 +90,8 @@ class Generator:
         )
 
     def add_replays(self, events, manifest, base):
-        """Same payload twice with replay delivery headers."""
+        """Same template payload twice with replay delivery headers."""
         replay = copy.deepcopy(base)
-        replay["properties"]["UUID"] = "RPL0000000000000000000000000001"
         self._add(
             events,
             manifest,

@@ -355,12 +355,24 @@ class AssertHelper:
             data=data,
         )
 
+    def _log_type_check(self, kind, field, expected_type):
+        """Short dashboard line after POST→GET; payload is already in POST/GET steps."""
+        self._info(
+            "Type check ("
+            + kind
+            + ") field="
+            + str(field)
+            + " expected_type="
+            + str(expected_type)
+        )
+
     def fits_type(self, steps, match, message=None, data=None):
         """Positive type check: value matches expected schema type."""
         field = match.get("field", "<unknown>")
         expected_type = match.get("expected_type", "<unknown>")
         actual = match.get("actual")
         if steps.fits_type(actual, expected_type):
+            self._log_type_check("type_ok", field, expected_type)
             return True
         if message is None:
             message = "Type check failed for field '" + str(field) + "'"
@@ -386,6 +398,7 @@ class AssertHelper:
         expected_type = match.get("expected_type", "<unknown>")
         actual = match.get("actual")
         if not steps.fits_type(actual, expected_type):
+            self._log_type_check("type_bad", field, expected_type)
             return True
         if message is None:
             message = (
@@ -412,11 +425,12 @@ class AssertHelper:
     def _sent_by_id(self, events):
         return {item["case_id"]: item["event"] for item in events}
 
-    def _post_case(self, receiver, case_id, sent, delivery_headers=None):
+    def _post_case(self, receiver, case_id, sent, delivery_headers=None, record_uuid=True):
         """POST one event to the receiver API."""
         headers = {"X-Case-Id": case_id}
         headers.update(delivery_headers or {})
-        self._record_uuid(sent)
+        if record_uuid:
+            self._record_uuid(sent)
         self._info("POST " + receiver.url + " case_id=" + str(case_id))
         if delivery_headers:
             self._info(json.dumps({"delivery_headers": delivery_headers}))
@@ -431,6 +445,13 @@ class AssertHelper:
             data={"case_id": case_id, "event": sent},
         )
         return response
+
+    def post_get_equals(self, receiver, case_id, sent, record_uuid=True):
+        """POST payload, GET it back, assert receiver stored exactly what we sent."""
+        self._post_case(
+            receiver, case_id, sent, record_uuid=record_uuid
+        )
+        return self.received_equals_sent(receiver, case_id, sent)
 
     def _get_rows(self, receiver, case_id):
         """GET stored rows for one case_id from the receiver API."""

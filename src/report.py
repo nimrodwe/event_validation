@@ -211,6 +211,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     }
 
     function testUuid(test) {
+      // First UUID that was sent for this test (empty string → "(empty)").
       if (test && test.uuid != null) {
         return test.uuid === '' ? '(empty)' : String(test.uuid);
       }

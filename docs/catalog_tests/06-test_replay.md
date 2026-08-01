@@ -7,7 +7,7 @@
 
 | case_id | Payload | `delivery_headers` |
 |---------|---------|-------------------|
-| `RPL-0001` | Same replay UUID payload | `X-Replay: false`, `X-Delivery: 1` |
+| `RPL-0001` | Same synthetic template payload (template UUID) | `X-Replay: false`, `X-Delivery: 1` |
 | `RPL-0002` | Same payload | `X-Replay: true`, `X-Delivery: 2` |
 
 ---

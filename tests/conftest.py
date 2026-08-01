@@ -144,12 +144,13 @@ def initialize(localhost, step_log, request):
     AssertHelper.log = step_log
 
     def record_uuid(uuid):
-        """Persist the first UUID for this test; Allure parameters show UUID only."""
-        if RUN_STORE.set_uuid(request.node.nodeid, uuid):
-            step_log.info("UUID " + ("" if uuid is None else str(uuid)))
+        """Persist the first sent UUID for this test (including empty); Allure skips empty."""
+        text = "" if uuid is None else str(uuid)
+        if RUN_STORE.set_uuid(request.node.nodeid, text):
+            step_log.info("UUID " + text)
         try:
-            if uuid is not None and str(uuid) != "":
-                allure.dynamic.parameter("UUID", str(uuid))
+            if text != "":
+                allure.dynamic.parameter("UUID", text)
         except Exception:
             pass
 

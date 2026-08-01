@@ -12,10 +12,10 @@ These tests are **not** the catalog (`events.json` / `manifest.json`). They use:
 
 | Doc | Test | Touches server? | What it proves |
 |-----|------|-----------------|----------------|
-| [01-test_type_ok.md](01-test_type_ok.md) | `test_type_ok` | No | Good synthetic fields fit schema types |
-| [02-test_type_bad.md](02-test_type_bad.md) | `test_type_bad` | No | Corrupted fields fail schema types |
+| [01-test_type_ok.md](01-test_type_ok.md) | `test_type_ok` | Yes | POST→GET synthetic event, then field fits schema type |
+| [02-test_type_bad.md](02-test_type_bad.md) | `test_type_bad` | Yes | POST→GET validation row, then field fails schema type |
 
-Round-trip POST→GET is covered by catalog tests (`test_positives` / `test_negatives`), not duplicated here.
+Both type tests POST the payload and GET it back so the receiver stored the right data, then run the schema type assert.
 
 Catalog docs: [`../catalog_tests/`](../catalog_tests/README.md)
 
@@ -35,4 +35,4 @@ flowchart LR
   bad --> typeBad
 ```
 
-**Type tests** check fixture values against the schema in memory only (no localhost).
+**Type tests** POST→GET the fixture payload through the local receiver, then check field types against the schema.

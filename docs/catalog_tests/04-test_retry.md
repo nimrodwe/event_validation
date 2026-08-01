@@ -7,7 +7,7 @@
 
 | case_id | Payload | `delivery_headers` |
 |---------|---------|-------------------|
-| `RTY-0001` | Same event (`UUID` = `RTY1`) | `Idempotency-Key: k1`, `X-Retry-Count: 1` |
+| `RTY-0001` | Same synthetic template event (template UUID) | `Idempotency-Key: k1`, `X-Retry-Count: 1` |
 | `RTY-0002` | Same event | `Idempotency-Key: k1`, `X-Retry-Count: 2` |
 
 ---

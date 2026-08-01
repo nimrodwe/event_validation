@@ -7,7 +7,7 @@
 
 | case_id | Setup |
 |---------|--------|
-| `DUP-0001` | Same near-duplicate payload (`UUID` = `DUP000…001`) |
+| `DUP-0001` | Same near-duplicate payload (synthetic template UUID) |
 | `DUP-0002` | Same payload again |
 
 ---

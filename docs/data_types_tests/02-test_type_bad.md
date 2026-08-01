@@ -3,7 +3,7 @@
 **File:** `tests/test_data_types.py`  
 **Parametrize:** one pytest case per field in `TypeParams.NEGATIVE_FIELDS`  
 **Data:** first row of `validation_dataset_intentionally_corrupted.json` + `EventsSchema.json`  
-**Server:** not used
+**Server:** yes — POST→GET via `catalog_receiver`
 
 ---
 
@@ -14,13 +14,13 @@
 | Source row | Corrupted flat dataset (first row) | Good nested synthetic |
 | Which fields | Only fields that **already** fail `fits_type` | All schema-mapped synthetic fields |
 | Assert helper | `type_mismatch` (must **not** fit) | `fits_type` (must fit) |
-| Mutates data? | No — corruption is already in the file | No |
+| Hits localhost? | Yes (POST→GET; no UUID label) | Yes (POST→GET + synthetic UUID) |
 
 ---
 
 ## High level
 
-Build the list of fields on the corrupted row that disagree with EventsSchema. For each such field, assert it still fails the type check (negative type test).
+POST the corrupted row, GET it back and assert equality, then for each already-wrong field assert it still fails the schema type check.
 
 How the param list is built:
 
@@ -39,11 +39,7 @@ def test_type_bad(initialize, match):
 
 - One run per known-bad field (e.g. `test_type_bad[datetime]`).
 
-```python
-    initialize.record_uuid(AssertHelper.event_uuid(initialize.validation_dataset))
-```
-
-- UUID from the flat row (top-level `UUID` on that dataset).
+- No `record_uuid` — validation JSON is not the synthetic input UUID.
 
 ```python
     AssertHelper.has_key(match, "field", ...)

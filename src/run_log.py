@@ -88,8 +88,9 @@ class TestRunStore:
         return current
 
     def set_uuid(self, nodeid, uuid):
-        """Record the first UUID for a running test (the one sent at the start).
+        """Record the first sent UUID for a running test (dashboard label).
 
+        Empty string is kept when that is what was sent (e.g. NEG-UUID).
         Returns True if this call stored the uuid, False if already set / not found.
         """
         for test in reversed(self.tests):
