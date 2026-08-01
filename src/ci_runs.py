@@ -40,7 +40,7 @@ class CiRuns:
 
     def _normalize(self, run):
         run_id = run.get("id")
-        # Always build github.io URLs — catalog may still store old jsDelivr links.
+        # Always build raw.githack URLs — catalog may still store github.io / CDN links.
         return {
             "run_number": run.get("run_number"),
             "id": run_id,

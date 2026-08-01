@@ -15,8 +15,12 @@ TEST_RUNS = OUT / "test_runs"
 GITHUB_REPO = "nimrodwe/event_validation"
 GITHUB_WORKFLOW_FILE = "allure-github-pages.yml"
 ALLURE_PAGES_URL = "https://nimrodwe.github.io/event_validation/"
-# Per-run Allure HTML on GitHub Pages (correct text/html). Do not use jsDelivr
-# directory URLs — those open the CDN file browser, not the Allure SPA.
+# Per-run Allure: serve from allure-pages via raw.githack (correct text/html).
+# github.io /runs/<id>/ 404s when Deploy Pages is blocked for non-main branches;
+# jsDelivr directory URLs show a file browser, not the Allure SPA.
+ALLURE_RUNS_URL = (
+    "https://raw.githack.com/" + GITHUB_REPO + "/allure-pages/"
+)
 # CI run list for the dashboard — raw file on allure-pages (no API, no token).
 # Prefer raw.githubusercontent (updates quickly). jsDelivr lags and is fallback only.
 CI_RUNS_CATALOG_URL = (
@@ -41,7 +45,7 @@ def allure_pages_run_url(run_id):
     """Public URL for one CI run's Allure report (no GitHub token)."""
     if run_id is None or str(run_id).strip() == "":
         return ""
-    return ALLURE_PAGES_URL.rstrip("/") + "/runs/" + str(run_id) + "/"
+    return ALLURE_RUNS_URL.rstrip("/") + "/runs/" + str(run_id) + "/"
 
 
 GOLDEN = {

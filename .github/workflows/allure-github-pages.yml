@@ -182,8 +182,9 @@ jobs:
           prev_path = Path("prev-pages/ci-runs.json")
           repo = os.environ["GITHUB_REPOSITORY"]
           rid = str(os.environ["GITHUB_RUN_ID"])
-          # GitHub Pages serves real text/html; jsDelivr directory URLs show a file browser.
-          pages = f"https://{repo.split('/')[0]}.github.io/{repo.split('/', 1)[1]}/"
+          # raw.githack serves allure-pages with correct MIME. github.io /runs/<id>
+          # 404s when Deploy Pages is blocked for non-default branches.
+          pages = f"https://raw.githack.com/{repo}/allure-pages/"
 
           by_id = {}
           if prev_path.is_file():
@@ -232,7 +233,7 @@ jobs:
                   "allure_url": pages.rstrip("/") + f"/runs/{folder}/",
               }
 
-          # Rewrite legacy jsDelivr allure_url values to GitHub Pages.
+          # Rewrite legacy github.io / jsDelivr allure_url values to raw.githack.
           for row in by_id.values():
               rid_key = str(row.get("id") or "")
               if rid_key:
@@ -267,8 +268,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Best-effort github.io deploy (may be blocked for non-default branches by
-      # environment rules). Dashboard Open Allure links use github.io /runs/<id>/.
+      # Best-effort github.io deploy (may be blocked for non-default branches).
+      # Dashboard Open Allure links use raw.githack over allure-pages, not github.io.
       - name: Upload GitHub Pages artifact
         continue-on-error: true
         uses: actions/upload-pages-artifact@v5
