@@ -74,11 +74,16 @@ jobs:
         env:
           CI: "true"
         run: |
+          # Always run pytest so Allure has real results; force_fail fails the step afterward.
+          set +e
+          python -m pytest -v --tb=short
+          code=$?
+          set -e
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.force_fail }}" = "true" ]; then
-            echo "Forced CI failure for dashboard check"
+            echo "Forced CI failure for dashboard check (pytest exit=$code)"
             exit 1
           fi
-          python -m pytest -v --tb=short
+          exit "$code"
 
       - name: Prepare Allure results history
         run: |
