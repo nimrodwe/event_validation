@@ -8,15 +8,30 @@ from src.config import OUT, INPUT_EVENT
 
 
 class Generator:
-    def _add(self, events, manifest, case_id, event, case_type, verdict, rule, headers=None):
+    def _add(
+        self,
+        events,
+        manifest,
+        case_id,
+        event,
+        case_type,
+        verdict,
+        rule,
+        headers=None,
+        expect=None,
+    ):
         events.append({"case_id": case_id, "event": event})
-        manifest.append({
+        row = {
             "case_id": case_id,
             "type": case_type,
             "intended_verdict": verdict,
             "target_rule_id": rule,
             "delivery_headers": headers or {},
-        })
+        }
+        # Optional property values the test must still see after GET (negatives).
+        if expect is not None:
+            row["expect"] = expect
+        manifest.append(row)
 
     def add_positives(self, events, manifest, base):
         """Unchanged template copy — round-trip / happy-path cases."""
@@ -29,20 +44,56 @@ class Generator:
         """
         bad = copy.deepcopy(base)
         bad["properties"]["UUID"] = ""
-        self._add(events, manifest, "NEG-UUID", bad, "negative", "invalid", "REQ-UUID")
+        self._add(
+            events,
+            manifest,
+            "NEG-UUID",
+            bad,
+            "negative",
+            "invalid",
+            "REQ-UUID",
+            expect={"UUID": ""},
+        )
 
         bad = copy.deepcopy(base)
         bad["properties"]["Threatcode"] = None
-        self._add(events, manifest, "NEG-TYPE", bad, "negative", "invalid", "REQ-Threatcode")
+        self._add(
+            events,
+            manifest,
+            "NEG-TYPE",
+            bad,
+            "negative",
+            "invalid",
+            "REQ-Threatcode",
+            expect={"Threatcode": None},
+        )
 
         bad = copy.deepcopy(base)
         bad["properties"]["__bad"] = 1
-        self._add(events, manifest, "NEG-SCHEMA", bad, "negative", "invalid", "SCHEMA")
+        self._add(
+            events,
+            manifest,
+            "NEG-SCHEMA",
+            bad,
+            "negative",
+            "invalid",
+            "SCHEMA",
+            expect={"__bad": 1},
+        )
 
         bad = copy.deepcopy(base)
         bad["properties"]["devicePlatform"] = "Android"
         bad["properties"]["$os"] = "iOS"
-        self._add(events, manifest, "NEG-XFIELD", bad, "negative", "invalid", "XFIELD-OS")
+        self._add(
+            events,
+            manifest,
+            "NEG-XFIELD",
+            bad,
+            "negative",
+            "invalid",
+            "XFIELD-OS",
+            expect={"devicePlatform": "Android", "$os": "iOS"},
+        )
 
     def add_boundary(self, events, manifest, base):
         """Edge values (time=0, token length short / at min). UUID stays from template."""
@@ -59,7 +110,7 @@ class Generator:
         self._add(events, manifest, "BND-TOKEN-EDGE", edge, "boundary", "valid", "NONE")
 
     def add_duplicates(self, events, manifest, base):
-        """Two near-identical deliveries — expect DUP-NEAR. Same template UUID."""
+        """Two near-identical deliveries — expect DUP-NEAR (full body match, UUID skipped)."""
         dup = copy.deepcopy(base)
         self._add(events, manifest, "DUP-0001", copy.deepcopy(dup), "duplicate", "valid", "NONE")
         self._add(events, manifest, "DUP-0002", copy.deepcopy(dup), "duplicate", "valid", "NONE")
@@ -89,12 +140,13 @@ class Generator:
         )
 
     def add_replays(self, events, manifest, base):
-        """Same template payload twice with replay delivery headers."""
+        """Same template payload twice; shared case_id so GET can count both deliveries."""
         replay = copy.deepcopy(base)
+        case_id = "RPL-0001"
         self._add(
             events,
             manifest,
-            "RPL-0001",
+            case_id,
             copy.deepcopy(replay),
             "replay",
             "valid",
@@ -104,7 +156,7 @@ class Generator:
         self._add(
             events,
             manifest,
-            "RPL-0002",
+            case_id,
             copy.deepcopy(replay),
             "replay",
             "valid",

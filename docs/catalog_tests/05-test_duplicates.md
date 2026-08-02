@@ -7,7 +7,7 @@
 
 | case_id | Setup |
 |---------|--------|
-| `DUP-0001` | Same near-duplicate payload (synthetic template UUID) |
+| `DUP-0001` | Same near-duplicate payload (full body) |
 | `DUP-0002` | Same payload again |
 
 ---
@@ -18,7 +18,7 @@
 |--------|-----------|------------------------|
 | Count | Exactly **2** | Any non-empty (or fixed BND set) |
 | When rules run | **After both** cases are posted | Negatives: per case after each GET |
-| Rule checked | `DUP-NEAR` via `check_received_dupes` | Negatives: `check_nested` + `target_rule_id` |
+| Rule checked | `DUP-NEAR` via body fingerprint (`UUID` skipped) | Negatives: `check_nested` + `target_rule_id` |
 | Needs both rows together | **Yes** — duplicate detection is across received items | No |
 | Outer `truthy` in test? | **No** | Yes for pos/neg |
 

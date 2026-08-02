@@ -5,18 +5,20 @@ from helpers.asserts import AssertHelper
 
 def test_positives(initialize, catalog_receiver):
     """
-    Sends each positive catalog event to the local receiver, then GETs it back
-    and checks the stored payload matches what was sent (round-trip).
+    Sends each positive catalog event, GETs it back (round-trip), then runs the
+    same nested rules as negatives and expects no findings.
     """
     events, positives = initialize.catalog.cases("positive")
     AssertHelper.truthy(positives, "No positive cases in manifest")
-    AssertHelper.check_positives(catalog_receiver, positives, events)
+    AssertHelper.check_positives(
+        catalog_receiver, initialize.validator, positives, events
+    )
 
 
 def test_negatives(initialize, catalog_receiver):
     """
-    Sends each negative catalog event, confirms GET returns the same payload,
-    and checks the target validation rule fires on the received event.
+    Sends each negative catalog event, GETs it back, checks intentional bad
+    field values (manifest expect), then expects the target nested rule.
     """
     events, negatives = initialize.catalog.cases("negative")
     AssertHelper.truthy(negatives, "No negative cases in manifest")
@@ -48,7 +50,7 @@ def test_retry(initialize, catalog_receiver):
 def test_duplicates(initialize, catalog_receiver):
     """
     Sends the near-duplicate case pair, confirms GET round-trip for each,
-    and checks validator reports DUP-NEAR on the received rows.
+    and checks validator reports DUP-NEAR when received bodies match.
     """
     events, duplicates = initialize.catalog.cases("duplicate")
     AssertHelper.check_duplicates(
@@ -58,8 +60,8 @@ def test_duplicates(initialize, catalog_receiver):
 
 def test_replay(initialize, catalog_receiver):
     """
-    Sends the replay case pair (same logical delivery twice), confirms both
-    POSTs are accepted and GET returns each payload unchanged.
+    Sends replay deliveries under one case_id, then asserts GET returns the
+    same number of events we POSTed (2→2, 1→1) with matching payloads.
     """
     events, replays = initialize.catalog.cases("replay")
     AssertHelper.check_replays(catalog_receiver, replays, events)

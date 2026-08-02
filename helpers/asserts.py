@@ -560,18 +560,69 @@ class AssertHelper:
             self.truthy(sent, "Missing sent event for " + case_id)
             self.received_equals_sent(receiver, case_id, sent)
 
-    def check_positives(self, receiver, cases, events):
-        """POST → GET → received event keys/values equal what was sent."""
+    def _assert_expect_props(self, case_id, received, expect):
+        """Assert properties on the received event match manifest expect{}."""
+        self.truthy(
+            expect,
+            case_id + " manifest is missing expect{} for data checks",
+            data={"case_id": case_id},
+        )
+        props = received.get("properties")
+        self.truthy(
+            isinstance(props, dict),
+            case_id + " received event is missing properties dict",
+            data={"case_id": case_id, "received": received},
+        )
+        for key, expected in expect.items():
+            self.equal(
+                props.get(key),
+                expected,
+                case_id
+                + ": received properties."
+                + str(key)
+                + " must match expect",
+                data={
+                    "case_id": case_id,
+                    "field": key,
+                    "expected": expected,
+                    "actual": props.get(key),
+                },
+            )
+        if "devicePlatform" in expect and "$os" in expect:
+            self.not_equal(
+                props.get("devicePlatform"),
+                props.get("$os"),
+                case_id + ": devicePlatform and $os must differ",
+                data={
+                    "case_id": case_id,
+                    "devicePlatform": props.get("devicePlatform"),
+                    "$os": props.get("$os"),
+                },
+            )
+
+    def check_positives(self, receiver, validator, cases, events):
+        """POST → GET → same rules as negatives, but findings must be empty."""
         sent_by_id = self._sent_by_id(events)
         for item in cases:
             case_id = item["case_id"]
             sent = sent_by_id.get(case_id)
             self.truthy(sent, "Missing event for " + case_id)
             self._post_case(receiver, case_id, sent, item.get("delivery_headers"))
-            self.received_equals_sent(receiver, case_id, sent)
+            received = self.received_equals_sent(receiver, case_id, sent)
+            findings = [f.to_dict() for f in validator.check_nested(received, case_id)]
+            self.equal(
+                findings,
+                [],
+                case_id + " positive event should not produce nested rule findings",
+                data={
+                    "case_id": case_id,
+                    "findings": findings,
+                    "received_event": received,
+                },
+            )
 
     def check_negatives(self, receiver, validator, cases, events):
-        """POST → GET → received equals sent → target rule present on received data."""
+        """POST → GET → bad data (expect) still present → target rule in findings."""
         sent_by_id = self._sent_by_id(events)
         for item in cases:
             case_id = item["case_id"]
@@ -580,6 +631,7 @@ class AssertHelper:
             self.truthy(sent, "Missing event for " + case_id)
             self._post_case(receiver, case_id, sent, item.get("delivery_headers"))
             received = self.received_equals_sent(receiver, case_id, sent)
+            self._assert_expect_props(case_id, received, item.get("expect") or {})
             findings = [f.to_dict() for f in validator.check_nested(received, case_id)]
             rule_ids = [f["rule_id"] for f in findings]
             self.truthy(
@@ -650,7 +702,7 @@ class AssertHelper:
             self.equal(stored_headers.get("X-Retry-Count"), headers["X-Retry-Count"])
 
     def check_duplicates(self, receiver, validator, cases, events):
-        """POST both → GET → received equals sent → DUP-NEAR on received rows."""
+        """POST both → GET → received equals sent → DUP-NEAR when bodies match."""
         self.equal(len(cases), 2, "Expected exactly two duplicate cases")
         sent_by_id = self._sent_by_id(events)
         received_items = []
@@ -667,15 +719,50 @@ class AssertHelper:
         self.equal(findings[0]["rule_id"], "DUP-NEAR", "Expected DUP-NEAR")
 
     def check_replays(self, receiver, cases, events):
-        """POST both → GET → received equals sent (both deliveries visible)."""
-        self.equal(len(cases), 2, "Expected exactly two replay cases")
+        """POST each replay delivery → GET event count must match posts; each body equals sent.
+
+        Replay cases share one case_id. Send 2 → expect 2 events; send 1 → expect 1.
+        """
+        self.truthy(cases, "Expected at least one replay case")
+        case_ids = {item.get("case_id") for item in cases}
+        self.equal(
+            len(case_ids),
+            1,
+            "Replay cases should share one case_id so GET can count deliveries",
+            data={"case_ids": sorted(str(x) for x in case_ids)},
+        )
+        case_id = cases[0]["case_id"]
         sent_by_id = self._sent_by_id(events)
+        sent = sent_by_id.get(case_id)
+        self.truthy(sent, "Missing event for " + case_id)
+
         for item in cases:
-            case_id = item["case_id"]
-            sent = sent_by_id.get(case_id)
-            self.truthy(sent, "Missing event for " + case_id)
             self._post_case(receiver, case_id, sent, item.get("delivery_headers"))
-            self.received_equals_sent(receiver, case_id, sent)
+
+        # Catalog arg is also named events — this list is what GET returned.
+        received_events = [row.get("event") for row in self._get_rows(receiver, case_id)]
+        self.equal(
+            len(received_events),
+            len(cases),
+            "Replay: GET must return one stored event per delivery we sent",
+            data={
+                "case_id": case_id,
+                "sent_count": len(cases),
+                "received_events_count": len(received_events),
+            },
+        )
+        for index, received in enumerate(received_events):
+            uuid = self.event_uuid(sent) or self.event_uuid(received) or "<missing UUID>"
+            self.equal(
+                received,
+                sent,
+                "Replay delivery "
+                + str(index + 1)
+                + " GET event must equal what we sent (UUID "
+                + str(uuid)
+                + ")",
+                data={"UUID": uuid, "case_id": case_id, "delivery": index + 1},
+            )
 
 
 # One shared instance — call AssertHelper.equal(...) with normal methods (no cls/staticmethod)

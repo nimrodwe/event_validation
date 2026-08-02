@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Event Validation — Interview walkthrough</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #12151a;
+      --panel: #1a1f27;
+      --line: #2c3542;
+      --text: #e8edf4;
+      --muted: #93a0b0;
+      --accent: #3dd6c6;
+      --accent-dim: rgba(61, 214, 198, 0.12);
+      --warn: #f0b429;
+      --code-bg: #0d1014;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "DM Sans", system-ui, sans-serif;
+      background:
+        radial-gradient(900px 400px at 10% -10%, #1e3a36 0%, transparent 55%),
+        var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    .wrap { max-width: 880px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+    h1 {
+      margin: 0 0 .35rem;
+      font-size: 1.75rem;
+      letter-spacing: -0.02em;
+    }
+    .tagline { color: var(--muted); margin: 0 0 1.5rem; font-size: .98rem; }
+    h2 {
+      margin: 2rem 0 .75rem;
+      font-size: 1.05rem;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--accent);
+    }
+    .grid {
+      display: grid;
+      gap: .65rem;
+      grid-template-columns: 1fr 1fr;
+    }
+    @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: .9rem 1rem;
+    }
+    .card strong { display: block; margin-bottom: .25rem; }
+    .card p { margin: 0; color: var(--muted); font-size: .9rem; }
+    .flow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .4rem;
+      align-items: center;
+      margin: .75rem 0 0;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: .78rem;
+    }
+    .flow span {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid rgba(61, 214, 198, .35);
+      padding: .25rem .5rem;
+      border-radius: 6px;
+    }
+    .flow i { color: var(--muted); font-style: normal; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .88rem;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    th, td {
+      text-align: left;
+      padding: .55rem .75rem;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    th { color: var(--muted); font-weight: 600; background: #151a21; }
+    tr:last-child td { border-bottom: 0; }
+    td:first-child { font-family: "IBM Plex Mono", monospace; font-size: .8rem; color: var(--accent); white-space: nowrap; }
+    details.test {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      margin: .6rem 0;
+      overflow: hidden;
+    }
+    details.test summary {
+      cursor: pointer;
+      list-style: none;
+      padding: .85rem 1rem;
+      display: grid;
+      gap: .2rem;
+      user-select: none;
+    }
+    details.test summary::-webkit-details-marker { display: none; }
+    details.test summary::after {
+      content: "▸ data walkthrough";
+      justify-self: start;
+      margin-top: .35rem;
+      font-size: .75rem;
+      color: var(--warn);
+      font-family: "IBM Plex Mono", monospace;
+    }
+    details.test[open] summary::after { content: "▾ hide walkthrough"; }
+    .t-name {
+      font-weight: 700;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: .92rem;
+    }
+    .t-brief { color: var(--muted); font-size: .9rem; }
+    .t-data {
+      font-size: .82rem;
+      color: var(--text);
+      opacity: .9;
+    }
+    .body { padding: 0 1rem 1rem; border-top: 1px solid var(--line); }
+    .body h3 {
+      margin: .9rem 0 .35rem;
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--muted);
+    }
+    pre {
+      margin: 0;
+      padding: .85rem 1rem;
+      background: var(--code-bg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: auto;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: .74rem;
+      line-height: 1.5;
+      color: #d5dde8;
+    }
+    .debug {
+      margin-top: .5rem;
+      padding: .75rem .9rem;
+      background: #141a22;
+      border: 1px dashed rgba(61, 214, 198, .35);
+      border-radius: 8px;
+      font-size: .8rem;
+    }
+    .debug > strong { display: block; margin-bottom: .5rem; color: var(--text); }
+    .dbg-row {
+      display: grid;
+      grid-template-columns: minmax(140px, 32%) 1fr;
+      gap: .35rem .75rem;
+      padding: .45rem 0;
+      border-top: 1px solid #243041;
+      align-items: start;
+    }
+    .dbg-row:first-of-type { border-top: 0; }
+    .dbg-cmd {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: .72rem;
+      color: var(--warn);
+      word-break: break-word;
+    }
+    .dbg-out {
+      color: var(--muted);
+      font-size: .78rem;
+    }
+    .dbg-out code {
+      font-family: "IBM Plex Mono", monospace;
+      font-size: .72rem;
+      color: var(--accent);
+    }
+    .dbg-out b { color: var(--text); font-weight: 600; }
+    .debug .ok { color: #7ddea0; }
+    .debug .var { color: var(--warn); }
+    .note {
+      margin-top: 1.5rem;
+      padding: .85rem 1rem;
+      border-left: 3px solid var(--accent);
+      background: var(--accent-dim);
+      color: var(--muted);
+      font-size: .88rem;
+      border-radius: 0 8px 8px 0;
+    }
+    .pill {
+      display: inline-block;
+      font-size: .7rem;
+      font-weight: 600;
+      padding: .15rem .4rem;
+      border-radius: 999px;
+      background: #243041;
+      color: var(--muted);
+      margin-right: .35rem;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Event Validation</h1>
+    <p class="tagline">
+      Synthetic events → localhost receiver → validate → pytest + Allure.
+      Built so we can prove data quality without touching production.
+    </p>
+
+    <h2>In one minute</h2>
+    <div class="grid">
+      <div class="card">
+        <strong>What we build</strong>
+        <p>Generate catalog cases from a template, POST Base64 JSON to a local Flask receiver, GET them back, assert round-trip + rules.</p>
+      </div>
+      <div class="card">
+        <strong>Why a manifest</strong>
+        <p><code>events.json</code> = payload. <code>manifest.json</code> = intent (type, rule, headers). Same event can mean retry / replay / negative.</p>
+      </div>
+      <div class="card">
+        <strong>Two suites</strong>
+        <p><b>Catalog</b> — case types (POS/NEG/BND/…). <b>Data types</b> — each schema field fits (or deliberately doesn’t).</p>
+      </div>
+      <div class="card">
+        <strong>Extras</strong>
+        <p>Local dashboard, Allure on CI (public per-run report), Docker for Mac/Windows parity.</p>
+      </div>
+    </div>
+    <div class="flow">
+      <span>template</span><i>→</i>
+      <span>generator + manifest</span><i>→</i>
+      <span>POST /v1/events</span><i>→</i>
+      <span>GET store</span><i>→</i>
+      <span>assert</span>
+    </div>
+
+    <h2>Example catalog files</h2>
+    <p class="tagline" style="margin-top:-.25rem">
+      Generator writes two files. Link them by <code>case_id</code>:
+      <b>events</b> = payload, <b>manifest</b> = what the test should do with it.
+    </p>
+    <div class="grid">
+      <div class="card" style="padding:.75rem">
+        <strong style="margin-bottom:.5rem">events.json <span style="color:var(--muted);font-weight:500">(payload)</span></strong>
+        <pre>[
+  {
+    "case_id": "POS-0001",
+    "event": {
+      "properties": {
+        "UUID": "D000…0001",
+        "Threatcode": "XTAOPJ",
+        "packageName": "com.example.synthetic"
+      }
+    }
+  },
+  {
+    "case_id": "NEG-UUID",
+    "event": {
+      "properties": {
+        "UUID": "",
+        "Threatcode": "XTAOPJ",
+        "packageName": "com.example.synthetic"
+      }
+    }
+  },
+  {
+    "case_id": "DUP-0001",
+    "event": {
+      "properties": {
+        "UUID": "D000…0001",
+        "Threatcode": "XTAOPJ",
+        "packageName": "com.example.synthetic"
+      }
+    }
+  },
+  {
+    "case_id": "DUP-0002",
+    "event": {
+      "properties": {
+        "UUID": "D000…0001",
+        "Threatcode": "XTAOPJ",
+        "packageName": "com.example.synthetic"
+      }
+    }
+  },
+  {
+    "case_id": "RPL-0001",
+    "event": {
+      "properties": {
+        "UUID": "D000…0001",
+        "Threatcode": "XTAOPJ"
+      }
+    }
+  },
+  {
+    "case_id": "RPL-0001",
+    "event": {
+      "properties": {
+        "UUID": "D000…0001",
+        "Threatcode": "XTAOPJ"
+      }
+    }
+  }
+]</pre>
+      </div>
+      <div class="card" style="padding:.75rem">
+        <strong style="margin-bottom:.5rem">manifest.json <span style="color:var(--muted);font-weight:500">(intent)</span></strong>
+        <pre>[
+  {
+    "case_id": "POS-0001",
+    "type": "positive",
+    "intended_verdict": "valid",
+    "target_rule_id": "NONE",
+    "delivery_headers": {}
+  },
+  {
+    "case_id": "NEG-UUID",
+    "type": "negative",
+    "intended_verdict": "invalid",
+    "target_rule_id": "REQ-UUID",
+    "delivery_headers": {},
+    "expect": { "UUID": "" }
+  },
+  {
+    "case_id": "DUP-0001",
+    "type": "duplicate",
+    "intended_verdict": "valid",
+    "target_rule_id": "NONE",
+    "delivery_headers": {}
+  },
+  {
+    "case_id": "DUP-0002",
+    "type": "duplicate",
+    "intended_verdict": "valid",
+    "target_rule_id": "NONE",
+    "delivery_headers": {}
+  },
+  {
+    "case_id": "RPL-0001",
+    "type": "replay",
+    "intended_verdict": "valid",
+    "target_rule_id": "NONE",
+    "delivery_headers": {
+      "X-Replay": "false",
+      "X-Delivery": "1"
+    }
+  },
+  {
+    "case_id": "RPL-0001",
+    "type": "replay",
+    "intended_verdict": "valid",
+    "target_rule_id": "NONE",
+    "delivery_headers": {
+      "X-Replay": "true",
+      "X-Delivery": "2"
+    }
+  }
+]</pre>
+      </div>
+    </div>
+    <div class="card" style="margin-top:.65rem">
+      <strong>How a test uses them</strong>
+      <p>
+        <code>cases("negative")</code> → keeps only manifest rows with
+        <code>type: "negative"</code> → looks up the matching body in
+        <code>events</code> by <code>case_id</code> → POST that body
+        (plus <code>delivery_headers</code> if any) → assert.
+        Same payload can appear twice (replay) with different headers.
+      </p>
+    </div>
+
+    <h2>What each catalog type does to data</h2>
+    <table>
+      <thead>
+        <tr><th>Type</th><th>Data change</th><th>We assert</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>positive</td>
+          <td>Unchanged template</td>
+          <td>GET == sent + nested rules → <b>no findings</b></td>
+        </tr>
+        <tr>
+          <td>negative</td>
+          <td>Break one thing (empty UUID, null Threatcode, bad field, OS mismatch)</td>
+          <td>GET == sent + <code>expect</code> values + nested rules → <b>target finding</b></td>
+        </tr>
+        <tr>
+          <td>boundary</td>
+          <td>Edge values (time=0, token len 29 / 30)</td>
+          <td>Round-trip + edge rules</td>
+        </tr>
+        <tr>
+          <td>retry</td>
+          <td>Same body, retry headers (count 1 then 2)</td>
+          <td>Body + headers stored</td>
+        </tr>
+        <tr>
+          <td>duplicate</td>
+          <td>Same payload twice (different case_ids)</td>
+          <td>Round-trip + body fingerprint → <code>DUP-NEAR</code> (not UUID)</td>
+        </tr>
+        <tr>
+          <td>replay</td>
+          <td>Same body twice, same case_id, replay headers</td>
+          <td>GET count == posts (2→2) + bodies match</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Catalog tests — variable / command debug</h2>
+    <p class="tagline" style="margin-top:-.25rem">
+      Left = code line. Right = what goes in, what it does, what you get out.
+    </p>
+
+    <details class="test" open>
+      <summary>
+        <span class="t-name">test_negatives</span>
+        <span class="t-brief">Each line with values (NEG-UUID example).</span>
+        <span class="t-data"><span class="pill">example</span> NEG-UUID</span>
+      </summary>
+      <div class="body">
+        <h3>Test file</h3>
+        <pre>def test_negatives(initialize, catalog_receiver):
+    events, negatives = initialize.catalog.cases("negative")
+    AssertHelper.check_negatives(
+        catalog_receiver, initialize.validator, negatives, events
+    )</pre>
+        <div class="debug">
+          <strong>1) In the test</strong>
+          <div class="dbg-row">
+            <div class="dbg-cmd">initialize</div>
+            <div class="dbg-out"><b>In:</b> fixture · <b>Holds:</b> <code>catalog</code>, <code>validator</code>, template helpers</div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">catalog_receiver</div>
+            <div class="dbg-out"><b>In:</b> fresh Flask store · <b>Out:</b> <code>url = "http://127.0.0.1:&lt;port&gt;/v1/events"</code></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">events, negatives = …cases("negative")</div>
+            <div class="dbg-out">
+              <b>In:</b> filter <code>type == "negative"</code><br>
+              <b>Out <code>events</code>:</b> all catalog payloads <code>[{case_id, event}, …]</code> (POS, NEG, RTY, …)<br>
+              <b>Out <code>negatives</code>:</b> only manifest negatives, e.g.<br>
+              <code>[{case_id:"NEG-UUID", target_rule_id:"REQ-UUID", expect:{"UUID":""}, …},
+ {case_id:"NEG-TYPE", …}, …]</code>
+            </div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">check_negatives(receiver, validator, negatives, events)</div>
+            <div class="dbg-out"><b>In:</b> those four args · <b>Impact:</b> runs the loop below for each negative case</div>
+          </div>
+        </div>
+        <h3>helpers/asserts.py — check_negatives</h3>
+        <pre>def check_negatives(self, receiver, validator, cases, events):
+    sent_by_id = self._sent_by_id(events)
+    for item in cases:
+        case_id = item["case_id"]
+        target = item["target_rule_id"]
+        sent = sent_by_id.get(case_id)
+        self.truthy(sent, "Missing event for " + case_id)
+        self._post_case(receiver, case_id, sent, item.get("delivery_headers"))
+        received = self.received_equals_sent(receiver, case_id, sent)
+        self._assert_expect_props(case_id, received, item.get("expect") or {})
+        findings = [f.to_dict() for f in validator.check_nested(received, case_id)]
+        rule_ids = [f["rule_id"] for f in findings]
+        self.truthy(target in rule_ids, ...)</pre>
+        <div class="debug">
+          <strong>2) Inside that code — first item NEG-UUID</strong>
+          <div class="dbg-row">
+            <div class="dbg-cmd">sent_by_id = self._sent_by_id(events)</div>
+            <div class="dbg-out">
+              <b>In:</b> full <code>events</code> list<br>
+              <b>Out:</b> <code>{"NEG-UUID": {properties:{UUID:"", …}}, "NEG-TYPE": {…}, …}</code><br>
+              <b>Impact:</b> fast lookup body by <code>case_id</code>
+            </div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">for item in cases:</div>
+            <div class="dbg-out">
+              <b>In:</b> <code>cases</code> is <code>negatives</code><br>
+              <b>Out (this turn):</b> <code>item = {case_id:"NEG-UUID", target_rule_id:"REQ-UUID", expect:{"UUID":""}, delivery_headers:{}, …}</code>
+            </div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">case_id = item["case_id"]</div>
+            <div class="dbg-out"><b>Out:</b> <code>"NEG-UUID"</code> · used as <code>X-Case-Id</code> and GET query</div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">target = item["target_rule_id"]</div>
+            <div class="dbg-out"><b>Out:</b> <code>"REQ-UUID"</code> · rule we must see later in findings</div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">sent = sent_by_id.get(case_id)</div>
+            <div class="dbg-out">
+              <b>In:</b> <code>"NEG-UUID"</code><br>
+              <b>Out:</b> event with <code>properties.UUID == ""</code> (and normal Threatcode, …)<br>
+              <b>Impact:</b> this exact JSON is what we POST
+            </div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">self.truthy(sent, …)</div>
+            <div class="dbg-out"><b>In:</b> <code>sent</code> dict · <b>Impact:</b> fail early if catalog missing that case · <span class="ok">pass</span></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">self._post_case(receiver, case_id, sent, item.get("delivery_headers"))</div>
+            <div class="dbg-out">
+              <b>In:</b> url, <code>case_id="NEG-UUID"</code>, <code>sent</code>, headers <code>{}</code><br>
+              <b>Does:</b> POST Base64(JSON(sent)) with <code>X-Case-Id: NEG-UUID</code><br>
+              <b>Out:</b> HTTP <code>202</code>; store row <code>{case_id, event: sent, …}</code>
+            </div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">received = self.received_equals_sent(receiver, case_id, sent)</div>
+            <div class="dbg-out">
+              <b>In:</b> GET <code>?case_id=NEG-UUID</code>, compare to <code>sent</code><br>
+              <b>Does:</b> <code>assert received == sent</code> (UUID still <code>""</code>)<br>
+              <b>Out:</b> <code>received</code> = same broken event dict · <span class="ok">pass</span>
+            </div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">self._assert_expect_props(case_id, received, item.get("expect"))</div>
+            <div class="dbg-out">
+              <b>In:</b> <code>expect = {"UUID": ""}</code>, <code>received.properties</code><br>
+              <b>Does:</b> <code>assert props.get("UUID") == ""</code><br>
+              <b>Out:</b> data still intentionally bad · <span class="ok">pass</span>
+            </div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">findings = [f.to_dict() for f in validator.check_nested(received, case_id)]</div>
+            <div class="dbg-out">
+              <b>In:</b> <code>received</code> with empty UUID, locator <code>"NEG-UUID"</code><br>
+              <b>Does:</b> scan required / schema / cross-field rules<br>
+              <b>Out:</b> e.g. <code>[{rule_id:"REQ-UUID", field:"UUID", observed:"", …}]</code>
+            </div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">rule_ids = [f["rule_id"] for f in findings]</div>
+            <div class="dbg-out"><b>Out:</b> <code>["REQ-UUID"]</code></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">self.truthy(target in rule_ids, …)</div>
+            <div class="dbg-out">
+              <b>In:</b> <code>target="REQ-UUID"</code>, <code>rule_ids=["REQ-UUID"]</code><br>
+              <b>Does:</b> <code>"REQ-UUID" in ["REQ-UUID"]</code><br>
+              <b>Out:</b> <span class="ok">pass</span> — wrong rule list would fail the test
+            </div>
+          </div>
+        </div>
+        <p class="tagline" style="margin:.75rem 0 0">Loop continues for NEG-TYPE / NEG-SCHEMA / NEG-XFIELD with their own <code>item</code>, <code>sent</code>, <code>target</code>, <code>expect</code>.</p>
+      </div>
+    </details>
+
+    <details class="test">
+      <summary>
+        <span class="t-name">test_positives</span>
+        <span class="t-brief">Code + line debug — POS-0001.</span>
+      </summary>
+      <div class="body">
+        <h3>Test file</h3>
+        <pre>def test_positives(initialize, catalog_receiver):
+    events, positives = initialize.catalog.cases("positive")
+    AssertHelper.check_positives(
+        catalog_receiver, initialize.validator, positives, events
+    )</pre>
+        <h3>helpers/asserts.py — check_positives</h3>
+        <pre>def check_positives(self, receiver, validator, cases, events):
+    sent_by_id = self._sent_by_id(events)
+    for item in cases:
+        case_id = item["case_id"]
+        sent = sent_by_id.get(case_id)
+        self.truthy(sent, "Missing event for " + case_id)
+        self._post_case(receiver, case_id, sent, item.get("delivery_headers"))
+        received = self.received_equals_sent(receiver, case_id, sent)
+        findings = [f.to_dict() for f in validator.check_nested(received, case_id)]
+        self.equal(findings, [], case_id + " … no nested rule findings", …)</pre>
+        <div class="debug">
+          <strong>Inside that code — POS-0001</strong>
+          <div class="dbg-row">
+            <div class="dbg-cmd">sent_by_id = self._sent_by_id(events)</div>
+            <div class="dbg-out"><b>Out:</b> <code>{"POS-0001": {properties:{UUID:"D000…", Threatcode:"XTAOPJ", …}}, …}</code></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">case_id = item["case_id"]</div>
+            <div class="dbg-out"><b>Out:</b> <code>"POS-0001"</code></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">sent = sent_by_id.get(case_id)</div>
+            <div class="dbg-out"><b>Out:</b> good template event (non-empty UUID, …)</div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">self._post_case(receiver, case_id, sent, …)</div>
+            <div class="dbg-out"><b>In:</b> good <code>sent</code> · <b>Out:</b> HTTP <code>202</code>, stored</div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">received = self.received_equals_sent(…)</div>
+            <div class="dbg-out"><b>Does:</b> GET + <code>assert received == sent</code> · <span class="ok">pass</span></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">findings = …check_nested(received, case_id)</div>
+            <div class="dbg-out"><b>Out:</b> <code>[]</code></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">self.equal(findings, [])</div>
+            <div class="dbg-out"><b>In:</b> <code>[] == []</code> · <span class="ok">pass</span></div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="test">
+      <summary>
+        <span class="t-name">test_boundary</span>
+        <span class="t-brief">Code + line debug — BND-TOKEN-SHORT.</span>
+      </summary>
+      <div class="body">
+        <h3>Test file</h3>
+        <pre>def test_boundary(initialize, catalog_receiver):
+    events, boundaries = initialize.catalog.cases("boundary")
+    AssertHelper.check_boundary(
+        catalog_receiver, initialize.validator, boundaries, events
+    )</pre>
+        <h3>helpers/asserts.py — check_boundary</h3>
+        <pre>def check_boundary(self, receiver, validator, cases, events):
+    …
+    for item in cases:
+        case_id = item["case_id"]
+        sent = sent_by_id.get(case_id)
+        self._post_case(receiver, case_id, sent, …)
+        received = self.received_equals_sent(receiver, case_id, sent)
+        props = received["properties"]
+        token = props.get("Appdome fusion app token")
+        token_findings = [f.to_dict() for f in validator.check_token_length(received, case_id)]
+        if case_id == "BND-TOKEN-SHORT":
+            self.equal(len(str(token)), validator.TOKEN_MIN_LEN - 1, …)
+            self.truthy("FMT" in [f["rule_id"] for f in token_findings], …)</pre>
+        <div class="debug">
+          <strong>Inside that code — BND-TOKEN-SHORT</strong>
+          <div class="dbg-row">
+            <div class="dbg-cmd">case_id / sent</div>
+            <div class="dbg-out"><code>"BND-TOKEN-SHORT"</code> · token = 29× <code>"x"</code></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">_post_case + received_equals_sent</div>
+            <div class="dbg-out"><b>Out:</b> <code>received</code> still has token len 29</div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">token = props.get("Appdome fusion app token")</div>
+            <div class="dbg-out"><b>Out:</b> string, <code>len == 29</code></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">token_findings = check_token_length(…)</div>
+            <div class="dbg-out"><b>Out:</b> <code>[{rule_id:"FMT", …}]</code></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">self.equal(len(str(token)), 29)</div>
+            <div class="dbg-out"><b>In:</b> <code>29 == 29</code> · <span class="ok">pass</span></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">self.truthy("FMT" in …)</div>
+            <div class="dbg-out"><b>In:</b> <code>True</code> · <span class="ok">pass</span></div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="test">
+      <summary>
+        <span class="t-name">test_retry</span>
+        <span class="t-brief">Code + line debug — RTY-0001.</span>
+      </summary>
+      <div class="body">
+        <h3>Test file</h3>
+        <pre>def test_retry(initialize, catalog_receiver):
+    events, retries = initialize.catalog.cases("retry")
+    AssertHelper.check_retries(catalog_receiver, retries, events)</pre>
+        <h3>helpers/asserts.py — check_retries</h3>
+        <pre>def check_retries(self, receiver, cases, events):
+    self.equal(len(cases), 2, …)
+    sent_by_id = self._sent_by_id(events)
+    for item in cases:
+        case_id = item["case_id"]
+        headers = item.get("delivery_headers") or {}
+        self.has_key(headers, "Idempotency-Key", …)
+        self.has_key(headers, "X-Retry-Count", …)
+        sent = sent_by_id.get(case_id)
+        self._post_case(receiver, case_id, sent, headers)
+        self.received_equals_sent(receiver, case_id, sent)
+        stored_headers = self._get_rows(receiver, case_id)[-1].get("headers") or {}
+        self.equal(stored_headers.get("Idempotency-Key"), headers["Idempotency-Key"])
+        self.equal(stored_headers.get("X-Retry-Count"), headers["X-Retry-Count"])</pre>
+        <div class="debug">
+          <strong>Inside that code — RTY-0001</strong>
+          <div class="dbg-row">
+            <div class="dbg-cmd">headers = item.get("delivery_headers")</div>
+            <div class="dbg-out"><b>Out:</b> <code>{"Idempotency-Key":"k1","X-Retry-Count":"1"}</code></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">sent = sent_by_id.get("RTY-0001")</div>
+            <div class="dbg-out"><b>Out:</b> template event body</div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">self._post_case(receiver, case_id, sent, headers)</div>
+            <div class="dbg-out"><b>In:</b> body + retry headers on HTTP request · store keeps them</div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">self.received_equals_sent(…)</div>
+            <div class="dbg-out"><b>Does:</b> GET body == <code>sent</code></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">stored_headers = self._get_rows(…)[-1].get("headers")</div>
+            <div class="dbg-out"><b>Out:</b> <code>{"Idempotency-Key":"k1","X-Retry-Count":"1", …}</code></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">self.equal(stored…, headers[…])</div>
+            <div class="dbg-out"><b>In:</b> <code>"k1"=="k1"</code>, <code>"1"=="1"</code> · <span class="ok">pass</span></div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="test">
+      <summary>
+        <span class="t-name">test_duplicates</span>
+        <span class="t-brief">Same body under two case_ids → fingerprint match → DUP-NEAR.</span>
+      </summary>
+      <div class="body">
+        <h3>Test file</h3>
+        <pre>def test_duplicates(initialize, catalog_receiver):
+    events, duplicates = initialize.catalog.cases("duplicate")
+    AssertHelper.check_duplicates(
+        catalog_receiver, initialize.validator, duplicates, events
+    )</pre>
+        <h3>helpers/asserts.py — check_duplicates</h3>
+        <pre>def check_duplicates(self, receiver, validator, cases, events):
+    self.equal(len(cases), 2, …)
+    sent_by_id = self._sent_by_id(events)
+    received_items = []
+    for item in cases:
+        case_id = item["case_id"]
+        sent = sent_by_id.get(case_id)
+        self._post_case(receiver, case_id, sent, item.get("delivery_headers"))
+        self.received_equals_sent(receiver, case_id, sent)
+        received_items.append(self._get_rows(receiver, case_id)[-1])
+    findings = [f.to_dict() for f in validator.check_received_dupes(received_items)]
+    self.truthy(findings, …)
+    self.equal(findings[0]["rule_id"], "DUP-NEAR", …)</pre>
+        <h3>src/validate.py — check_received_dupes</h3>
+        <pre>def _dupe_fingerprint(self, event):
+    # strip UUID / Datetime / Mp Processing Time Ms, then json.dumps(sort_keys=True)
+    …
+
+def check_received_dupes(self, items):
+    groups = {}
+    for item in items:
+        case_id = item.get("case_id", "?")
+        key = self._dupe_fingerprint(item.get("event", item))
+        groups.setdefault(key, []).append(case_id)
+    # any group with 2+ case_ids → DUP-NEAR (field "*")</pre>
+        <div class="debug">
+          <strong>Inside that code</strong>
+          <div class="dbg-row">
+            <div class="dbg-cmd">cases</div>
+            <div class="dbg-out">
+              <b>Out:</b> <code>DUP-0001</code>, <code>DUP-0002</code><br>
+              Same nested <code>event</code> body (generator deepcopy of template twice)
+            </div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">loop: _post_case + received_equals_sent + append</div>
+            <div class="dbg-out">
+              <b>Does:</b> POST each, assert GET body == sent<br>
+              <b>Out:</b> <code>received_items</code> length 2 (last store row per case_id)
+            </div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">key = _dupe_fingerprint(event)</div>
+            <div class="dbg-out">
+              <b>Does:</b> walk all fields inside <code>event</code> / <code>properties</code><br>
+              <b>Skips:</b> <code>UUID</code>, <code>Datetime</code>, <code>Mp Processing Time Ms</code><br>
+              <b>Out:</b> one JSON fingerprint string per item<br>
+              Both DUP cases → <b>same key</b> (payload match, not “same UUID”)
+            </div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">groups[key] → case_ids</div>
+            <div class="dbg-out"><b>Out:</b> <code>{"…fingerprint…": ["DUP-0001", "DUP-0002"]}</code></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">findings = check_received_dupes(received_items)</div>
+            <div class="dbg-out">
+              <b>Out:</b> <code>[{rule_id:"DUP-NEAR", field:"*", observed:"dup of DUP-0001", locator:"DUP-0002", …}]</code>
+            </div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">self.truthy(findings) + equal(rule_id, "DUP-NEAR")</div>
+            <div class="dbg-out"><b>In:</b> non-empty + <code>"DUP-NEAR"</code> · <span class="ok">pass</span></div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="test">
+      <summary>
+        <span class="t-name">test_replay</span>
+        <span class="t-brief">Code + line debug — RPL-0001 × 2.</span>
+      </summary>
+      <div class="body">
+        <h3>Test file</h3>
+        <pre>def test_replay(initialize, catalog_receiver):
+    events, replays = initialize.catalog.cases("replay")
+    AssertHelper.check_replays(catalog_receiver, replays, events)</pre>
+        <h3>helpers/asserts.py — check_replays</h3>
+        <pre>def check_replays(self, receiver, cases, events):
+    self.truthy(cases, …)
+    case_ids = {item.get("case_id") for item in cases}
+    self.equal(len(case_ids), 1, …)
+    case_id = cases[0]["case_id"]
+    sent_by_id = self._sent_by_id(events)
+    sent = sent_by_id.get(case_id)
+    self.truthy(sent, …)
+    for item in cases:
+        self._post_case(receiver, case_id, sent, item.get("delivery_headers"))
+    received_events = [row.get("event") for row in self._get_rows(receiver, case_id)]
+    self.equal(len(received_events), len(cases), …)
+    for index, received in enumerate(received_events):
+        self.equal(received, sent, …)</pre>
+        <div class="debug">
+          <strong>Inside that code</strong>
+          <div class="dbg-row">
+            <div class="dbg-cmd">cases</div>
+            <div class="dbg-out">2 rows, both <code>case_id="RPL-0001"</code>, different headers</div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">case_id = cases[0]["case_id"]</div>
+            <div class="dbg-out"><b>Out:</b> <code>"RPL-0001"</code></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">sent = sent_by_id.get(case_id)</div>
+            <div class="dbg-out">one shared event body</div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">for item in cases: _post_case(…, item["delivery_headers"])</div>
+            <div class="dbg-out">POST #1 <code>X-Replay:false</code> · POST #2 <code>X-Replay:true</code></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">received_events = [row.get("event") for row in _get_rows(…)]</div>
+            <div class="dbg-out"><b>Out:</b> list of <b>2</b> event dicts</div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">self.equal(len(received_events), len(cases))</div>
+            <div class="dbg-out"><b>In:</b> <code>2 == 2</code> · <span class="ok">pass</span></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">for received in received_events: self.equal(received, sent)</div>
+            <div class="dbg-out">each body == <code>sent</code></div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <h2>Data-type tests</h2>
+
+    <details class="test">
+      <summary>
+        <span class="t-name">test_type_ok</span>
+        <span class="t-brief">Code + line debug — threatcode.</span>
+      </summary>
+      <div class="body">
+        <h3>Test file</h3>
+        <pre>@pytest.mark.parametrize("field", TypeParams.POSITIVE_FIELD_NAMES)
+def test_type_ok(initialize, catalog_receiver, field):
+    event = initialize.synthetic_dataset
+    match = TypeParams.positive_match(field)
+    AssertHelper.post_get_equals(catalog_receiver, "TYPE-OK-" + field, event)
+    AssertHelper.fits_type(initialize.synthetic_steps, match)</pre>
+        <h3>helpers/asserts.py — post_get_equals + fits_type</h3>
+        <pre>def post_get_equals(self, receiver, case_id, sent, record_uuid=True):
+    self._post_case(receiver, case_id, sent, record_uuid=record_uuid)
+    return self.received_equals_sent(receiver, case_id, sent)
+
+def fits_type(self, steps, match, …):
+    field = match.get("field")
+    expected_type = match.get("expected_type")
+    actual = match.get("actual")
+    if steps.fits_type(actual, expected_type):
+        …  # pass
+    self._fail(…)</pre>
+        <div class="debug">
+          <strong>Inside that code — field="threatcode"</strong>
+          <div class="dbg-row">
+            <div class="dbg-cmd">field</div>
+            <div class="dbg-out"><b>In:</b> <code>"threatcode"</code></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">event = initialize.synthetic_dataset</div>
+            <div class="dbg-out">full good template</div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">match = positive_match(field)</div>
+            <div class="dbg-out"><code>{field:"threatcode", actual:"XTAOPJ", expected_type:"String"}</code></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">post_get_equals(…, "TYPE-OK-threatcode", event)</div>
+            <div class="dbg-out">POST + GET + <code>received == event</code></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">fits_type(…, match)</div>
+            <div class="dbg-out"><b>In:</b> <code>"XTAOPJ"</code> vs <code>"String"</code> · <span class="ok">pass</span></div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="test">
+      <summary>
+        <span class="t-name">test_type_bad</span>
+        <span class="t-brief">Code + line debug — bad field.</span>
+      </summary>
+      <div class="body">
+        <h3>Test file</h3>
+        <pre>@pytest.mark.parametrize("field", TypeParams.NEGATIVE_FIELD_NAMES)
+def test_type_bad(initialize, catalog_receiver, field):
+    row = initialize.validation_dataset
+    match = TypeParams.negative_match(field)
+    AssertHelper.post_get_equals(
+        catalog_receiver, "TYPE-BAD-" + field, row, record_uuid=False
+    )
+    AssertHelper.type_mismatch(initialize.dataset_steps, match)</pre>
+        <h3>helpers/asserts.py — type_mismatch</h3>
+        <pre>def type_mismatch(self, steps, match, …):
+    field = match.get("field")
+    expected_type = match.get("expected_type")
+    actual = match.get("actual")
+    if not steps.fits_type(actual, expected_type):
+        …  # pass — value is still the wrong type
+    self._fail(…)</pre>
+        <div class="debug">
+          <strong>Inside that code</strong>
+          <div class="dbg-row">
+            <div class="dbg-cmd">row = validation_dataset</div>
+            <div class="dbg-out">corrupted row (wrong types on purpose)</div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">match = negative_match(field)</div>
+            <div class="dbg-out"><code>{field, actual: &lt;bad&gt;, expected_type: "…"}</code></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">post_get_equals(…, row)</div>
+            <div class="dbg-out">store/return same bad row</div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">type_mismatch(…, match)</div>
+            <div class="dbg-out">assert actual does <em>not</em> fit type · <span class="ok">pass</span></div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <h2>Key pieces (names only)</h2>
+    <div class="grid">
+      <div class="card">
+        <strong>helpers/generator.py</strong>
+        <p>Builds events + manifest from the template.</p>
+      </div>
+      <div class="card">
+        <strong>src/receiver.py</strong>
+        <p>Local POST/GET store (Base64 in, JSON kept).</p>
+      </div>
+      <div class="card">
+        <strong>src/validate.py</strong>
+        <p>Rules: required, types, format, cross-field, dupes…</p>
+      </div>
+      <div class="card">
+        <strong>helpers/asserts.py</strong>
+        <p>POST→GET helpers + clear failure text for Allure.</p>
+      </div>
+    </div>
+
+    <p class="note">
+      Interview tip: show the <b>code block</b> first, then walk left→right (command → in/out).
+      Negatives is open by default.
+    </p>
+  </div>
+</body>
+</html>

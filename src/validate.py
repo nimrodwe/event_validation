@@ -285,28 +285,44 @@ class Validator:
             result.append(f.to_dict())
         return result
 
+    def _dupe_fingerprint(self, event):
+        """Serialize event body for near-dupe match — all fields except identity/noise."""
+        if not isinstance(event, dict):
+            return json.dumps(event, sort_keys=True)
+        cleaned = {}
+        for key, value in event.items():
+            if key in DUPE_SKIP:
+                continue
+            if key == "properties" and isinstance(value, dict):
+                props = {}
+                for prop_key, prop_value in value.items():
+                    if prop_key not in DUPE_SKIP:
+                        props[prop_key] = prop_value
+                cleaned[key] = props
+            else:
+                cleaned[key] = value
+        return json.dumps(cleaned, sort_keys=True)
+
     def check_received_dupes(self, items):
-        """Flag duplicate UUIDs among received nested events (keep all visible)."""
-        by_uuid = {}
+        """Flag received nested events whose payload matches (UUID / noise skipped)."""
+        groups = {}
         for item in items:
             case_id = item.get("case_id", "?")
-            props = item.get("event", {}).get("properties", {})
-            uuid = props.get("UUID")
-            if not uuid:
-                continue
-            if uuid not in by_uuid:
-                by_uuid[uuid] = []
-            by_uuid[uuid].append(case_id)
+            event = item.get("event", item)
+            key = self._dupe_fingerprint(event)
+            if key not in groups:
+                groups[key] = []
+            groups[key].append(case_id)
 
         findings = []
-        for uuid, case_ids in by_uuid.items():
+        for case_ids in groups.values():
             if len(case_ids) < 2:
                 continue
             original = case_ids[0]
             for case_id in case_ids[1:]:
                 findings.append(
                     self.make_finding(
-                        case_id, "DUP-NEAR", "UUID", "dup of " + original, "unique", "duplicates", "received"
+                        case_id, "DUP-NEAR", "*", "dup of " + original, "unique", "duplicates", "received"
                     )
                 )
         return findings
