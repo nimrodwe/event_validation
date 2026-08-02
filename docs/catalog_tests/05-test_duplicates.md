@@ -8,7 +8,7 @@
 | case_id | Setup |
 |---------|--------|
 | `DUP-0001` | Same near-duplicate payload (full body) |
-| `DUP-0002` | Same payload again |
+| `DUP-0002` | Same payload again — must be **blocked** by the receiver |
 
 ---
 
@@ -17,16 +17,18 @@
 | Topic | This test | Positives / Negatives |
 |--------|-----------|------------------------|
 | Count | Exactly **2** | Any non-empty (or fixed BND set) |
-| When rules run | **After both** cases are posted | Negatives: per case after each GET |
-| Rule checked | `DUP-NEAR` via body fingerprint (`UUID` skipped) | Negatives: `check_nested` + `target_rule_id` |
-| Needs both rows together | **Yes** — duplicate detection is across received items | No |
+| Second POST | **409 Conflict** (not stored) | Expected **202** |
+| Enforcement | Receiver body fingerprint (`UUID` skipped) | Negatives: `check_nested` + `target_rule_id` |
+| Needs both rows together | **No** — second never lands | No |
 | Outer `truthy` in test? | **No** | Yes for pos/neg |
+
+Retry / replay may still store the same body when `Idempotency-Key` or `X-Replay` is set.
 
 ---
 
 ## High level
 
-Load the duplicate pair → require two cases → POST+GET each (body equal) → collect stored rows → run duplicate detector → expect `DUP-NEAR`.
+Load the duplicate pair → POST first (202 + GET equals sent) → POST second (409, `blocked`) → GET second case_id returns no rows.
 
 ---
 
@@ -50,7 +52,7 @@ def test_duplicates(initialize, catalog_receiver):
     )
 ```
 
-- Passes `validator` (for dupe check). No outer `truthy`.
+- No outer `truthy`.
 
 ---
 
@@ -60,38 +62,29 @@ def test_duplicates(initialize, catalog_receiver):
 self.equal(len(cases), 2, "Expected exactly two duplicate cases")
 ```
 
-- Pair required (like retry/replay).
+- Pair required.
 
 ```python
-sent_by_id = self._sent_by_id(events)
-received_items = []
-for item in cases:
-    case_id = item["case_id"]
-    sent = sent_by_id.get(case_id)
-    self.truthy(sent, ...)
-    self._post_case(...)
-    self.received_equals_sent(...)
-    received_items.append(self._get_rows(receiver, case_id)[-1])
+self._post_case(..., first_id, first_sent, ...)
+self.received_equals_sent(...)
 ```
 
-- Round-trip each case (same as positives).
-- **Differs:** keep the full stored rows (not just the event) for the dupe check.
+- First delivery accepted and round-trips.
 
 ```python
-findings = [f.to_dict() for f in validator.check_received_dupes(received_items)]
+self._post_case(..., second_id, second_sent, ..., expected_status=HttpStatus.CONFLICT)
 ```
 
-- **Differs:** validate **across** the two received deliveries, not nested field rules on one event.
+- Second same body → **409**; receipt has `decode_status: "duplicate"`, `blocked: true`, `duplicate_of_case_id` = first.
 
 ```python
-self.truthy(findings, "Duplicate cases should produce a duplicate finding")
-self.equal(findings[0]["rule_id"], "DUP-NEAR", "Expected DUP-NEAR")
+GET ?case_id=DUP-0002 → events == []
 ```
 
-- Must produce at least one finding, and the first rule id must be `DUP-NEAR`.
+- Blocked POST must not appear in the store.
 
 ---
 
 ## What success means
 
-Two near-duplicate catalog deliveries round-trip, and together they trigger `DUP-NEAR`.
+The receiver is idempotent for plain duplicate bodies: first wins, second is rejected with 409.

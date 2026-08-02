@@ -5,12 +5,12 @@
 **Manifest filter:** `type == "negative"`  
 **Pipeline cases:**
 
-| case_id | What was broken | `target_rule_id` |
-|---------|-----------------|------------------|
-| `NEG-UUID` | `UUID` set to `""` | `REQ-UUID` |
-| `NEG-TYPE` | `Threatcode` set to `None` | `REQ-Threatcode` |
-| `NEG-SCHEMA` | Extra key `__bad` | `SCHEMA` |
-| `NEG-XFIELD` | `devicePlatform` ≠ `$os` | `XFIELD-OS` |
+| case_id | What was broken | `target_rule_id` | `target_field` |
+|---------|-----------------|------------------|----------------|
+| `NEG-UUID` | `UUID` set to `""` | `REQ-UUID` | `UUID` |
+| `NEG-TYPE` | `Threatcode` set to `None` | `REQ-Threatcode` | `Threatcode` |
+| `NEG-SCHEMA` | Extra key `__bad` | `SCHEMA` | `__bad` |
+| `NEG-XFIELD` | `devicePlatform` ≠ `$os` | `XFIELD-OS` | `platform/$os` |
 
 ---
 
@@ -20,7 +20,7 @@
 |--------|-----------|-----------|
 | Round-trip equality | Yes (same) | Yes |
 | After GET | Run `validator.check_nested` on **received** data | Stop after equality |
-| Pass condition | `target_rule_id` must be in findings | No rule check |
+| Pass condition | target rule fires **and** `finding.field == target_field` | No rule check |
 | Uses `initialize.validator` | **Yes** | No |
 | Cases | Intentionally broken copies of template | Unbroken copy |
 
@@ -76,36 +76,33 @@ for item in cases:
 
 ```python
     target = item["target_rule_id"]
+    target_field = item["target_field"]
 ```
 
-- **Differs:** read which rule this case was built to trigger (from manifest).
+- **Differs:** manifest says which rule and which **field** the finding must report.
 
 ```python
     sent = sent_by_id.get(case_id)
     self.truthy(sent, "Missing event for " + case_id)
     self._post_case(...)
     received = self.received_equals_sent(...)
+    self._assert_expect_props(...)
 ```
 
-- Same POST → GET → equality as positives.
-- Keeps `received` for the next steps.
+- Same POST → GET → equality as positives, plus broken `expect` values still present.
 
 ```python
     findings = [f.to_dict() for f in validator.check_nested(received, case_id)]
+    matched = [f for f in findings if f["rule_id"] == target]
+    self.truthy(matched, ...)
+    self.truthy(target_field in [f["field"] for f in matched], ...)
 ```
 
-- **Differs:** run nested validation rules on what came back from the server (not on the in-memory copy before send).
-
-```python
-    rule_ids = [f["rule_id"] for f in findings]
-    self.truthy(target in rule_ids, ...)
-```
-
-- **Differs:** pass only if the designed `target_rule_id` appears in findings.
+- **Differs:** rule must fire **and** `finding.field` must be the broken field (not another one).
 
 ---
 
 ## What success means
 
 1. Broken payload survived round-trip unchanged.  
-2. After GET, the validator reports the expected rule for that case.
+2. After GET, the validator reports the expected rule **on the correct field**.

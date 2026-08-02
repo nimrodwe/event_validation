@@ -325,6 +325,7 @@
     "type": "negative",
     "intended_verdict": "invalid",
     "target_rule_id": "REQ-UUID",
+    "target_field": "UUID",
     "delivery_headers": {},
     "expect": { "UUID": "" }
   },
@@ -379,37 +380,64 @@
     <h2>What each catalog type does to data</h2>
     <table>
       <thead>
-        <tr><th>Type</th><th>Data change</th><th>We assert</th></tr>
+        <tr><th>Type</th><th>Data change</th><th>Rules</th><th>We assert</th></tr>
       </thead>
       <tbody>
         <tr>
           <td>positive</td>
           <td>Unchanged template</td>
+          <td>
+            <code>POS-0001</code> → <code>NONE</code><br>
+            <span style="color:var(--muted)">runs <code>check_nested</code>; expect empty findings</span>
+          </td>
           <td>GET == sent + nested rules → <b>no findings</b></td>
         </tr>
         <tr>
           <td>negative</td>
           <td>Break one thing (empty UUID, null Threatcode, bad field, OS mismatch)</td>
-          <td>GET == sent + <code>expect</code> values + nested rules → <b>target finding</b></td>
+          <td>
+            <code>NEG-UUID</code> → <code>REQ-UUID</code> on <code>UUID</code><br>
+            <code>NEG-TYPE</code> → <code>REQ-Threatcode</code> on <code>Threatcode</code><br>
+            <code>NEG-SCHEMA</code> → <code>SCHEMA</code> on <code>__bad</code><br>
+            <code>NEG-XFIELD</code> → <code>XFIELD-OS</code> on <code>platform/$os</code>
+          </td>
+          <td>GET == sent + <code>expect</code> + rule on <b>correct field</b></td>
         </tr>
         <tr>
           <td>boundary</td>
           <td>Edge values (time=0, token len 29 / 30)</td>
+          <td>
+            <code>BND-0001</code> → <code>NONE</code> (time=0 ok)<br>
+            <code>BND-TOKEN-SHORT</code> → <code>FMT</code> (token len 29)<br>
+            <code>BND-TOKEN-EDGE</code> → <code>NONE</code> (token len 30)
+          </td>
           <td>Round-trip + edge rules</td>
         </tr>
         <tr>
           <td>retry</td>
           <td>Same body, retry headers (count 1 then 2)</td>
+          <td>
+            <code>RTY-0001</code> / <code>RTY-0002</code> → <code>NONE</code><br>
+            <span style="color:var(--muted)">headers: <code>Idempotency-Key</code>, <code>X-Retry-Count</code></span>
+          </td>
           <td>Body + headers stored</td>
         </tr>
         <tr>
           <td>duplicate</td>
           <td>Same payload twice (different case_ids)</td>
-          <td>Round-trip + body fingerprint → <code>DUP-NEAR</code> (not UUID)</td>
+          <td>
+            <code>DUP-0001</code> / <code>DUP-0002</code> → <code>NONE</code> (manifest)<br>
+            <span style="color:var(--muted)">receiver: body fingerprint → <code>409</code> on 2nd POST</span>
+          </td>
+          <td>First <code>202</code>; second body fingerprint → <code>409</code> (not stored)</td>
         </tr>
         <tr>
           <td>replay</td>
           <td>Same body twice, same case_id, replay headers</td>
+          <td>
+            <code>RPL-0001</code> ×2 → <code>NONE</code><br>
+            <span style="color:var(--muted)">headers: <code>X-Replay</code>, <code>X-Delivery</code> (allow redeploy)</span>
+          </td>
           <td>GET count == posts (2→2) + bodies match</td>
         </tr>
       </tbody>
@@ -449,29 +477,42 @@
               <b>In:</b> filter <code>type == "negative"</code><br>
               <b>Out <code>events</code>:</b> all catalog payloads <code>[{case_id, event}, …]</code> (POS, NEG, RTY, …)<br>
               <b>Out <code>negatives</code>:</b> only manifest negatives, e.g.<br>
-              <code>[{case_id:"NEG-UUID", target_rule_id:"REQ-UUID", expect:{"UUID":""}, …},
+              <code>[{case_id:"NEG-UUID", target_rule_id:"REQ-UUID", target_field:"UUID", expect:{"UUID":""}, …},
  {case_id:"NEG-TYPE", …}, …]</code>
             </div>
           </div>
           <div class="dbg-row">
             <div class="dbg-cmd">check_negatives(receiver, validator, negatives, events)</div>
-            <div class="dbg-out"><b>In:</b> those four args · <b>Impact:</b> runs the loop below for each negative case</div>
+            <div class="dbg-out">
+              <b>In — four args:</b><br>
+              <code>receiver</code> = <code>catalog_receiver</code> · Flask store URL for POST/GET<br>
+              <code>validator</code> = <code>initialize.validator</code> · runs <code>check_nested</code> after GET<br>
+              <code>negatives</code> → param <code>cases</code> · 4 manifest rows (NEG-UUID, NEG-TYPE, NEG-SCHEMA, NEG-XFIELD)<br>
+              <code>events</code> → param <code>events</code> · full catalog payloads (lookup body by <code>case_id</code>)<br>
+              <b>Does:</b> for each of the 4 cases → POST → GET == sent → <code>expect</code> still bad → rule fires on <code>target_field</code><br>
+              <b>Out:</b> all 4 pass, or fail on the first broken assert (see loop below)
+            </div>
           </div>
         </div>
         <h3>helpers/asserts.py — check_negatives</h3>
         <pre>def check_negatives(self, receiver, validator, cases, events):
+    # events  → sent_by_id = {case_id: event body, …}
+    # cases   → for item in negatives (4 times)
+    # receiver → POST / GET that body
+    # validator → check_nested(received) → findings
     sent_by_id = self._sent_by_id(events)
     for item in cases:
         case_id = item["case_id"]
-        target = item["target_rule_id"]
+        target = item["target_rule_id"]       # e.g. "REQ-UUID"
+        target_field = item["target_field"]   # e.g. "UUID"
         sent = sent_by_id.get(case_id)
-        self.truthy(sent, "Missing event for " + case_id)
-        self._post_case(receiver, case_id, sent, item.get("delivery_headers"))
+        self._post_case(receiver, case_id, sent, …)
         received = self.received_equals_sent(receiver, case_id, sent)
-        self._assert_expect_props(case_id, received, item.get("expect") or {})
-        findings = [f.to_dict() for f in validator.check_nested(received, case_id)]
-        rule_ids = [f["rule_id"] for f in findings]
-        self.truthy(target in rule_ids, ...)</pre>
+        self._assert_expect_props(case_id, received, item["expect"])
+        findings = validator.check_nested(received, case_id)
+        matched = [f for f in findings if f["rule_id"] == target]
+        assert matched
+        assert target_field in [f["field"] for f in matched]</pre>
         <div class="debug">
           <strong>2) Inside that code — first item NEG-UUID</strong>
           <div class="dbg-row">
@@ -486,7 +527,7 @@
             <div class="dbg-cmd">for item in cases:</div>
             <div class="dbg-out">
               <b>In:</b> <code>cases</code> is <code>negatives</code><br>
-              <b>Out (this turn):</b> <code>item = {case_id:"NEG-UUID", target_rule_id:"REQ-UUID", expect:{"UUID":""}, delivery_headers:{}, …}</code>
+              <b>Out (this turn):</b> <code>item = {case_id:"NEG-UUID", target_rule_id:"REQ-UUID", target_field:"UUID", expect:{"UUID":""}, …}</code>
             </div>
           </div>
           <div class="dbg-row">
@@ -494,8 +535,8 @@
             <div class="dbg-out"><b>Out:</b> <code>"NEG-UUID"</code> · used as <code>X-Case-Id</code> and GET query</div>
           </div>
           <div class="dbg-row">
-            <div class="dbg-cmd">target = item["target_rule_id"]</div>
-            <div class="dbg-out"><b>Out:</b> <code>"REQ-UUID"</code> · rule we must see later in findings</div>
+            <div class="dbg-cmd">target / target_field</div>
+            <div class="dbg-out"><b>Out:</b> rule <code>"REQ-UUID"</code> must report field <code>"UUID"</code></div>
           </div>
           <div class="dbg-row">
             <div class="dbg-cmd">sent = sent_by_id.get(case_id)</div>
@@ -538,23 +579,23 @@
             <div class="dbg-out">
               <b>In:</b> <code>received</code> with empty UUID, locator <code>"NEG-UUID"</code><br>
               <b>Does:</b> scan required / schema / cross-field rules<br>
-              <b>Out:</b> e.g. <code>[{rule_id:"REQ-UUID", field:"UUID", observed:"", …}]</code>
+              <b>Out:</b> e.g. <code>[{rule_id:"REQ-UUID", field:"UUID", …}]</code>
             </div>
           </div>
           <div class="dbg-row">
-            <div class="dbg-cmd">rule_ids = [f["rule_id"] for f in findings]</div>
-            <div class="dbg-out"><b>Out:</b> <code>["REQ-UUID"]</code></div>
+            <div class="dbg-cmd">matched = [f for f in findings if f["rule_id"] == target]</div>
+            <div class="dbg-out"><b>Out:</b> <code>[{rule_id:"REQ-UUID", field:"UUID", …}]</code> · rule fired · <span class="ok">pass</span></div>
           </div>
           <div class="dbg-row">
-            <div class="dbg-cmd">self.truthy(target in rule_ids, …)</div>
+            <div class="dbg-cmd">assert target_field in [f["field"] for f in matched]</div>
             <div class="dbg-out">
-              <b>In:</b> <code>target="REQ-UUID"</code>, <code>rule_ids=["REQ-UUID"]</code><br>
-              <b>Does:</b> <code>"REQ-UUID" in ["REQ-UUID"]</code><br>
-              <b>Out:</b> <span class="ok">pass</span> — wrong rule list would fail the test
+              <b>In:</b> <code>target_field="UUID"</code>, fields <code>["UUID"]</code><br>
+              <b>Does:</b> error must be attributed to the broken field, not another one<br>
+              <b>Out:</b> <span class="ok">pass</span>
             </div>
           </div>
         </div>
-        <p class="tagline" style="margin:.75rem 0 0">Loop continues for NEG-TYPE / NEG-SCHEMA / NEG-XFIELD with their own <code>item</code>, <code>sent</code>, <code>target</code>, <code>expect</code>.</p>
+        <p class="tagline" style="margin:.75rem 0 0">Loop continues for NEG-TYPE / NEG-SCHEMA / NEG-XFIELD — each checks its own <code>target_rule_id</code> + <code>target_field</code>.</p>
       </div>
     </details>
 
@@ -729,7 +770,7 @@
     <details class="test">
       <summary>
         <span class="t-name">test_duplicates</span>
-        <span class="t-brief">Same body under two case_ids → fingerprint match → DUP-NEAR.</span>
+        <span class="t-brief">First 202; second same body → 409 blocked (not stored).</span>
       </summary>
       <div class="body">
         <h3>Test file</h3>
@@ -741,29 +782,20 @@
         <h3>helpers/asserts.py — check_duplicates</h3>
         <pre>def check_duplicates(self, receiver, validator, cases, events):
     self.equal(len(cases), 2, …)
-    sent_by_id = self._sent_by_id(events)
-    received_items = []
-    for item in cases:
-        case_id = item["case_id"]
-        sent = sent_by_id.get(case_id)
-        self._post_case(receiver, case_id, sent, item.get("delivery_headers"))
-        self.received_equals_sent(receiver, case_id, sent)
-        received_items.append(self._get_rows(receiver, case_id)[-1])
-    findings = [f.to_dict() for f in validator.check_received_dupes(received_items)]
-    self.truthy(findings, …)
-    self.equal(findings[0]["rule_id"], "DUP-NEAR", …)</pre>
-        <h3>src/validate.py — check_received_dupes</h3>
-        <pre>def _dupe_fingerprint(self, event):
-    # strip UUID / Datetime / Mp Processing Time Ms, then json.dumps(sort_keys=True)
-    …
-
-def check_received_dupes(self, items):
-    groups = {}
-    for item in items:
-        case_id = item.get("case_id", "?")
-        key = self._dupe_fingerprint(item.get("event", item))
-        groups.setdefault(key, []).append(case_id)
-    # any group with 2+ case_ids → DUP-NEAR (field "*")</pre>
+    # first: POST 202 + GET equals sent
+    self._post_case(receiver, "DUP-0001", sent, …)
+    self.received_equals_sent(…)
+    # second: same body → 409, not in store
+    self._post_case(…, "DUP-0002", sent, …, expected_status=409)
+    assert receipt.decode_status == "duplicate" and blocked is True
+    GET ?case_id=DUP-0002 → events == []</pre>
+        <h3>src/receiver.py — duplicate block</h3>
+        <pre>fp = dupe_fingerprint(event)  # UUID / Datetime / Mp Processing Time Ms skipped
+# Allowed redeploy if Idempotency-Key or X-Replay (retry / replay tests)
+if fingerprint already stored and no allow header:
+    write receipt (decode_status="duplicate", blocked=true)
+    return 409  # do not append events.jsonl
+# else append + 202</pre>
         <div class="debug">
           <strong>Inside that code</strong>
           <div class="dbg-row">
@@ -774,34 +806,31 @@ def check_received_dupes(self, items):
             </div>
           </div>
           <div class="dbg-row">
-            <div class="dbg-cmd">loop: _post_case + received_equals_sent + append</div>
+            <div class="dbg-cmd">POST DUP-0001</div>
             <div class="dbg-out">
-              <b>Does:</b> POST each, assert GET body == sent<br>
-              <b>Out:</b> <code>received_items</code> length 2 (last store row per case_id)
+              <b>Out:</b> <code>202</code> · stored in <code>events.jsonl</code><br>
+              GET body == sent · <span class="ok">pass</span>
             </div>
           </div>
           <div class="dbg-row">
-            <div class="dbg-cmd">key = _dupe_fingerprint(event)</div>
+            <div class="dbg-cmd">dupe_fingerprint(event)</div>
             <div class="dbg-out">
               <b>Does:</b> walk all fields inside <code>event</code> / <code>properties</code><br>
               <b>Skips:</b> <code>UUID</code>, <code>Datetime</code>, <code>Mp Processing Time Ms</code><br>
-              <b>Out:</b> one JSON fingerprint string per item<br>
-              Both DUP cases → <b>same key</b> (payload match, not “same UUID”)
+              Both DUP cases → <b>same fingerprint</b>
             </div>
           </div>
           <div class="dbg-row">
-            <div class="dbg-cmd">groups[key] → case_ids</div>
-            <div class="dbg-out"><b>Out:</b> <code>{"…fingerprint…": ["DUP-0001", "DUP-0002"]}</code></div>
-          </div>
-          <div class="dbg-row">
-            <div class="dbg-cmd">findings = check_received_dupes(received_items)</div>
+            <div class="dbg-cmd">POST DUP-0002 (no Idempotency-Key / X-Replay)</div>
             <div class="dbg-out">
-              <b>Out:</b> <code>[{rule_id:"DUP-NEAR", field:"*", observed:"dup of DUP-0001", locator:"DUP-0002", …}]</code>
+              <b>Out:</b> <code>409</code>
+              <code>{decode_status:"duplicate", blocked:true, duplicate_of_case_id:"DUP-0001", …}</code><br>
+              Raw + receipt written; <b>not</b> appended to <code>events.jsonl</code>
             </div>
           </div>
           <div class="dbg-row">
-            <div class="dbg-cmd">self.truthy(findings) + equal(rule_id, "DUP-NEAR")</div>
-            <div class="dbg-out"><b>In:</b> non-empty + <code>"DUP-NEAR"</code> · <span class="ok">pass</span></div>
+            <div class="dbg-cmd">GET ?case_id=DUP-0002</div>
+            <div class="dbg-out"><b>Out:</b> <code>{"events": []}</code> · <span class="ok">pass</span></div>
           </div>
         </div>
       </div>

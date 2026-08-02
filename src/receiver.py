@@ -14,6 +14,7 @@ from flask import Flask, jsonify, request
 from werkzeug.serving import make_server
 
 from services.http_status import HttpStatus
+from src.dupe import dupe_fingerprint
 
 
 class Receiver:
@@ -41,6 +42,15 @@ class Receiver:
         if self._temp_out and self.out.exists():
             shutil.rmtree(self.out, ignore_errors=True)
 
+    def _find_stored_duplicate(self, event):
+        """Return the first stored row with the same body fingerprint, or None."""
+        key = dupe_fingerprint(event)
+        for row in self._stored_rows():
+            stored = row.get("event")
+            if stored is not None and dupe_fingerprint(stored) == key:
+                return row
+        return None
+
     def receive(self):
         body = request.get_data()
         self.seq = self.seq + 1
@@ -56,6 +66,20 @@ class Receiver:
         try:
             text = base64.b64decode(body).decode("utf-8")
             event = json.loads(text)
+            allow_redeploy = bool(
+                request.headers.get("Idempotency-Key")
+                or request.headers.get("X-Replay")
+            )
+            prior = None if allow_redeploy else self._find_stored_duplicate(event)
+            if prior is not None:
+                receipt["decode_status"] = "duplicate"
+                receipt["blocked"] = True
+                receipt["duplicate_of_seq"] = prior.get("seq")
+                receipt["duplicate_of_case_id"] = prior.get("case_id")
+                with (self.out / "receipts.jsonl").open("a", encoding="utf-8") as f:
+                    f.write(json.dumps(receipt) + "\n")
+                return jsonify(receipt), HttpStatus.CONFLICT
+
             receipt["decode_status"] = "ok"
             row = {"seq": self.seq, "event": event}
             case_id = request.headers.get("X-Case-Id")

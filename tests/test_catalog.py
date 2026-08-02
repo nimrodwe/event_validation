@@ -18,7 +18,7 @@ def test_positives(initialize, catalog_receiver):
 def test_negatives(initialize, catalog_receiver):
     """
     Sends each negative catalog event, GETs it back, checks intentional bad
-    field values (manifest expect), then expects the target nested rule.
+    field values (manifest expect), then expects the target rule on that field.
     """
     events, negatives = initialize.catalog.cases("negative")
     AssertHelper.truthy(negatives, "No negative cases in manifest")
@@ -49,8 +49,8 @@ def test_retry(initialize, catalog_receiver):
 
 def test_duplicates(initialize, catalog_receiver):
     """
-    Sends the near-duplicate case pair, confirms GET round-trip for each,
-    and checks validator reports DUP-NEAR when received bodies match.
+    First duplicate POST is accepted and round-trips; the second same body
+    is blocked with 409 and never stored.
     """
     events, duplicates = initialize.catalog.cases("duplicate")
     AssertHelper.check_duplicates(

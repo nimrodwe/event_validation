@@ -482,8 +482,18 @@ class AssertHelper:
     def _sent_by_id(self, events):
         return {item["case_id"]: item["event"] for item in events}
 
-    def _post_case(self, receiver, case_id, sent, delivery_headers=None, record_uuid=True):
+    def _post_case(
+        self,
+        receiver,
+        case_id,
+        sent,
+        delivery_headers=None,
+        record_uuid=True,
+        expected_status=None,
+    ):
         """POST one event to the receiver API."""
+        if expected_status is None:
+            expected_status = HttpStatus.ACCEPTED
         headers = {"X-Case-Id": case_id}
         headers.update(delivery_headers or {})
         if record_uuid:
@@ -509,8 +519,8 @@ class AssertHelper:
         self._info("status=" + str(response.status_code))
         self.status_code(
             response,
-            HttpStatus.ACCEPTED,
-            case_id + " POST should be accepted",
+            expected_status,
+            case_id + " POST should return " + str(expected_status),
             data={"case_id": case_id, "event": sent},
         )
         return response
@@ -622,32 +632,57 @@ class AssertHelper:
             )
 
     def check_negatives(self, receiver, validator, cases, events):
-        """POST → GET → bad data (expect) still present → target rule in findings."""
+        """POST → GET → bad data (expect) → target rule on the correct field."""
         sent_by_id = self._sent_by_id(events)
         for item in cases:
             case_id = item["case_id"]
             target = item["target_rule_id"]
+            target_field = item.get("target_field")
             sent = sent_by_id.get(case_id)
             self.truthy(sent, "Missing event for " + case_id)
+            self.truthy(
+                target_field,
+                case_id + " manifest is missing target_field for field-level checks",
+                data={"case_id": case_id},
+            )
             self._post_case(receiver, case_id, sent, item.get("delivery_headers"))
             received = self.received_equals_sent(receiver, case_id, sent)
             self._assert_expect_props(case_id, received, item.get("expect") or {})
             findings = [f.to_dict() for f in validator.check_nested(received, case_id)]
-            rule_ids = [f["rule_id"] for f in findings]
+            matched = [f for f in findings if f.get("rule_id") == target]
             self.truthy(
-                target in rule_ids,
+                matched,
                 "Negative case "
                 + case_id
                 + " should hit rule "
                 + target
                 + " after GET, got "
-                + str(rule_ids),
+                + str([f.get("rule_id") for f in findings]),
                 data={
                     "case_id": case_id,
                     "target_rule_id": target,
-                    "rule_ids_found": rule_ids,
+                    "target_field": target_field,
                     "findings": findings,
                     "received_event": received,
+                },
+            )
+            fields = [f.get("field") for f in matched]
+            self.truthy(
+                target_field in fields,
+                "Negative case "
+                + case_id
+                + " rule "
+                + target
+                + " must report field "
+                + str(target_field)
+                + ", got "
+                + str(fields),
+                data={
+                    "case_id": case_id,
+                    "target_rule_id": target,
+                    "target_field": target_field,
+                    "matched_findings": matched,
+                    "findings": findings,
                 },
             )
 
@@ -702,21 +737,48 @@ class AssertHelper:
             self.equal(stored_headers.get("X-Retry-Count"), headers["X-Retry-Count"])
 
     def check_duplicates(self, receiver, validator, cases, events):
-        """POST both → GET → received equals sent → DUP-NEAR when bodies match."""
+        """POST first → 202 + GET equals sent; second same body → 409 and not stored."""
         self.equal(len(cases), 2, "Expected exactly two duplicate cases")
         sent_by_id = self._sent_by_id(events)
-        received_items = []
-        for item in cases:
-            case_id = item["case_id"]
-            sent = sent_by_id.get(case_id)
-            self.truthy(sent, "Missing event for " + case_id)
-            self._post_case(receiver, case_id, sent, item.get("delivery_headers"))
-            self.received_equals_sent(receiver, case_id, sent)
-            received_items.append(self._get_rows(receiver, case_id)[-1])
+        first, second = cases[0], cases[1]
 
-        findings = [f.to_dict() for f in validator.check_received_dupes(received_items)]
-        self.truthy(findings, "Duplicate cases should produce a duplicate finding")
-        self.equal(findings[0]["rule_id"], "DUP-NEAR", "Expected DUP-NEAR")
+        first_id = first["case_id"]
+        first_sent = sent_by_id.get(first_id)
+        self.truthy(first_sent, "Missing event for " + first_id)
+        self._post_case(
+            receiver, first_id, first_sent, first.get("delivery_headers")
+        )
+        self.received_equals_sent(receiver, first_id, first_sent)
+
+        second_id = second["case_id"]
+        second_sent = sent_by_id.get(second_id)
+        self.truthy(second_sent, "Missing event for " + second_id)
+        response = self._post_case(
+            receiver,
+            second_id,
+            second_sent,
+            second.get("delivery_headers"),
+            expected_status=HttpStatus.CONFLICT,
+        )
+        body = response.json() or {}
+        self.equal(body.get("decode_status"), "duplicate", "Blocked POST should be marked duplicate")
+        self.equal(body.get("blocked"), True, "Blocked POST should set blocked=true")
+        self.equal(
+            body.get("duplicate_of_case_id"),
+            first_id,
+            "409 should point at the first stored duplicate case",
+        )
+
+        # Second case must not appear in the store.
+        get_response = self.http.get(receiver.url, params={"case_id": second_id})
+        self.status_code(get_response, HttpStatus.OK, "GET after blocked POST should succeed")
+        rows = (get_response.json() or {}).get("events") or []
+        self.equal(
+            rows,
+            [],
+            second_id + " must not be stored after duplicate 409",
+            data={"case_id": second_id, "rows": rows},
+        )
 
     def check_replays(self, receiver, cases, events):
         """POST each replay delivery → GET event count must match posts; each body equals sent.

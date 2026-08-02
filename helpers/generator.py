@@ -19,6 +19,7 @@ class Generator:
         rule,
         headers=None,
         expect=None,
+        target_field=None,
     ):
         events.append({"case_id": case_id, "event": event})
         row = {
@@ -31,6 +32,9 @@ class Generator:
         # Optional property values the test must still see after GET (negatives).
         if expect is not None:
             row["expect"] = expect
+        # Finding.field the target rule must report (negatives).
+        if target_field is not None:
+            row["target_field"] = target_field
         manifest.append(row)
 
     def add_positives(self, events, manifest, base):
@@ -53,6 +57,7 @@ class Generator:
             "invalid",
             "REQ-UUID",
             expect={"UUID": ""},
+            target_field="UUID",
         )
 
         bad = copy.deepcopy(base)
@@ -66,6 +71,7 @@ class Generator:
             "invalid",
             "REQ-Threatcode",
             expect={"Threatcode": None},
+            target_field="Threatcode",
         )
 
         bad = copy.deepcopy(base)
@@ -79,6 +85,7 @@ class Generator:
             "invalid",
             "SCHEMA",
             expect={"__bad": 1},
+            target_field="__bad",
         )
 
         bad = copy.deepcopy(base)
@@ -93,6 +100,7 @@ class Generator:
             "invalid",
             "XFIELD-OS",
             expect={"devicePlatform": "Android", "$os": "iOS"},
+            target_field="platform/$os",
         )
 
     def add_boundary(self, events, manifest, base):
@@ -110,7 +118,7 @@ class Generator:
         self._add(events, manifest, "BND-TOKEN-EDGE", edge, "boundary", "valid", "NONE")
 
     def add_duplicates(self, events, manifest, base):
-        """Two near-identical deliveries — expect DUP-NEAR (full body match, UUID skipped)."""
+        """Two near-identical deliveries — second POST blocked by receiver (409)."""
         dup = copy.deepcopy(base)
         self._add(events, manifest, "DUP-0001", copy.deepcopy(dup), "duplicate", "valid", "NONE")
         self._add(events, manifest, "DUP-0002", copy.deepcopy(dup), "duplicate", "valid", "NONE")

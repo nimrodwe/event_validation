@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 from src.config import DATASET, DUPE_SKIP, GOLDEN, PROPS_OK, REQUIRED, Schema
+from src.dupe import dupe_fingerprint
 
 UUID_RE = re.compile(r"^[0-9a-f-]{36}$", re.I)
 FTC_RE = re.compile(r"^\d+:[0-9a-f]{4}:[A-Z0-9]{6}$")
@@ -287,21 +288,7 @@ class Validator:
 
     def _dupe_fingerprint(self, event):
         """Serialize event body for near-dupe match — all fields except identity/noise."""
-        if not isinstance(event, dict):
-            return json.dumps(event, sort_keys=True)
-        cleaned = {}
-        for key, value in event.items():
-            if key in DUPE_SKIP:
-                continue
-            if key == "properties" and isinstance(value, dict):
-                props = {}
-                for prop_key, prop_value in value.items():
-                    if prop_key not in DUPE_SKIP:
-                        props[prop_key] = prop_value
-                cleaned[key] = props
-            else:
-                cleaned[key] = value
-        return json.dumps(cleaned, sort_keys=True)
+        return dupe_fingerprint(event)
 
     def check_received_dupes(self, items):
         """Flag received nested events whose payload matches (UUID / noise skipped)."""
@@ -309,7 +296,7 @@ class Validator:
         for item in items:
             case_id = item.get("case_id", "?")
             event = item.get("event", item)
-            key = self._dupe_fingerprint(event)
+            key = dupe_fingerprint(event)
             if key not in groups:
                 groups[key] = []
             groups[key].append(case_id)

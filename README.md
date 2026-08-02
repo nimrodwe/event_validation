@@ -15,7 +15,21 @@ Local pipeline tests: generate synthetic events, POST them to a localhost receiv
 
 ## Setup
 
+Create a virtual environment, activate it, then install dependencies:
+
 ```bash
+# Create venv
+python -m venv .venv
+
+# Activate (macOS / Linux)
+source .venv/bin/activate
+
+# Activate (Windows PowerShell)
+.\.venv\Scripts\Activate.ps1
+
+# Activate (Windows cmd)
+.\.venv\Scripts\activate.bat
+
 python -m pip install -r requirements.txt
 ```
 
