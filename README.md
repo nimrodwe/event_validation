@@ -80,7 +80,3 @@ python run.py docker
 ```
 
 Source is mounted at `/app`, so local edits show up in the container. To run tests in Docker instead: `python run.py docker -- compose --profile test run --rm test`.
-
-## CI
-
-GitHub Actions (`.github/workflows/allure-github-pages.yml`) runs the full pytest suite on every push (any branch), on PRs, on a daily schedule, and via manual dispatch. Each run’s Allure report and a public `ci-runs.json` catalog are pushed to the `allure-pages` branch. The local dashboard reads that catalog (not the GitHub API), so **Pytest CI runs** and **Open Allure report** work on every machine with no GitHub login or token. The job fails if pytest fails, but that run’s Allure is still published first.

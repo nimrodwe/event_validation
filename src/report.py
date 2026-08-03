@@ -7,11 +7,10 @@ import threading
 import time
 import webbrowser
 
-from flask import Flask, jsonify, render_template_string, request, send_from_directory
+from flask import Flask, jsonify, render_template_string, request
 from werkzeug.serving import make_server
 
-from src.ci_runs import CI_RUNS
-from src.config import ALLURE_PAGES_URL, DATASET, OUT
+from src.config import DATASET, OUT
 from src.run_log import clear_runs, load_runs
 from src.validate import Validator
 
@@ -99,7 +98,15 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     .test-title::before { content: "▸ "; color: #64748b; font-size: .75rem; }
     .test-block.open .test-title::before { content: "▾ "; color: #38bdf8; }
     .test-name { color: #e2e8f0; }
-    .test-uuid { color: #94a3b8; font-size: .85rem; margin-left: auto; }
+    .test-right {
+      margin-left: auto; display: flex; align-items: center; gap: .5rem;
+    }
+    .test-uuid { color: #94a3b8; font-size: .85rem; }
+    .test-neg {
+      color: #fbbf24; font-weight: 700; font-size: .85rem;
+      border: 1px solid rgba(251, 191, 36, .45);
+      border-radius: 4px; padding: .05rem .35rem;
+    }
     .fail-summary {
       margin: .35rem 0 .5rem; color: #fca5a5; font-family: ui-monospace, monospace;
       font-size: .82rem; white-space: pre-wrap; word-break: break-word;
@@ -123,8 +130,6 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       border-left: 3px solid #f87171; padding: .35rem .5rem; margin: 0 0 .6rem; border-radius: 4px;
     }
     .empty { color: #64748b; font-size: .9rem; }
-    .ci-meta { color: #94a3b8; font-size: .85rem; }
-    .ci-note { color: #64748b; font-size: .8rem; margin-top: .75rem; }
     button.btn {
       background: #0f172a; color: #e2e8f0; border: 1px solid #475569; border-radius: 6px;
       padding: .4rem .75rem; cursor: pointer; font-size: .85rem;
@@ -149,7 +154,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   <header>
     <div>
       <h1>Event Validation</h1>
-      <div class="sub">Pytest runs and CI</div>
+      <div class="sub">Local pytest runs</div>
     </div>
     <div class="status">
       <div class="actions">
@@ -168,32 +173,11 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       </div>
       <div id="runs" class="empty">Loading…</div>
     </section>
-    <section class="panel panel-pad">
-      <div class="section-head">
-        <div>
-          <h2>Pytest CI runs (shared)</h2>
-          <div class="sub" id="ci-sub">Same public catalog on every machine — look here for workflow #38 etc.</div>
-        </div>
-        <div class="actions">
-          <button class="btn" id="btn-refresh-ci" type="button">Refresh CI list</button>
-          <a id="btn-allure-pages" class="btn btn-primary" href="{{ allure_pages_url }}" target="_blank" rel="noopener">Open Allure report</a>
-        </div>
-      </div>
-      <div id="ci-error" class="msg" style="color:#fca5a5"></div>
-      <div id="ci-runs" class="empty">Loading…</div>
-    </section>
   </main>
   <script>
     let testRuns = {{ test_runs_json | safe }};
-    let ciPayload = {{ ci_runs_json | safe }};
-    const ALLURE_PAGES_URL = {{ allure_pages_url | tojson }};
     const openRuns = new Set();
     const openTests = new Set();
-    const openCiRuns = new Set();
-
-    function allurePagesUrl() {
-      return (ciPayload && ciPayload.allure_pages_url) || ALLURE_PAGES_URL || '';
-    }
 
     function esc(s) {
       return String(s)
@@ -220,6 +204,12 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
     function testName(nodeid) {
       return (nodeid || '').split('::').pop() || nodeid || '';
+    }
+
+    function isNegativeTest(test) {
+      if (test && test.negative === true) return true;
+      const name = testName(test && test.nodeid);
+      return name.startsWith('test_negatives') || name.startsWith('test_type_bad');
     }
 
     function testUuid(test) {
@@ -315,7 +305,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           }
           const title = document.createElement('div');
           title.className = 'test-title';
-          title.innerHTML = `${outcomeBadge(t.outcome)} <span class="test-name">${esc(testName(t.nodeid))}</span>${uuidHtml}`;
+          const negHtml = isNegativeTest(t) ? '<span class="test-neg">(N)</span>' : '';
+          title.innerHTML =
+            `${outcomeBadge(t.outcome)} <span class="test-name">${esc(testName(t.nodeid))}</span>` +
+            `<span class="test-right">${negHtml}${uuidHtml}</span>`;
           title.onclick = () => {
             if (openTests.has(testKey)) openTests.delete(testKey); else openTests.add(testKey);
             block.classList.toggle('open');
@@ -338,134 +331,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       });
     }
 
-    function ciBadge(run) {
-      if (run.conclusion) {
-        const c = run.conclusion;
-        const cls = (c === 'success' || c === 'failure' || c === 'cancelled') ? c : 'skipped';
-        return `<span class="badge ${cls}">${esc(c)}</span>`;
-      }
-      const st = run.status || 'queued';
-      return `<span class="badge in_progress">${esc(st)}</span>`;
-    }
-
-    function ciHasInProgress(payload) {
-      return ((payload && payload.runs) || []).some(
-        r => !r.conclusion || (r.status && r.status !== 'completed')
-      );
-    }
-
-    function renderCiRuns() {
-      const root = document.getElementById('ci-runs');
-      const errEl = document.getElementById('ci-error');
-      const subEl = document.getElementById('ci-sub');
-      const allureBtn = document.getElementById('btn-allure-pages');
-      const pagesUrl = allurePagesUrl();
-      const runs = (ciPayload && ciPayload.runs) || [];
-      const updated = (ciPayload && ciPayload.updated_at) || '';
-      errEl.textContent = (ciPayload && ciPayload.error) ? ciPayload.error : '';
-      if (subEl) {
-        subEl.textContent = updated
-          ? ('Shared catalog · ' + runs.length + ' runs · updated ' + niceDate(updated) + ' — same on Windows and Mac')
-          : 'Same public catalog on every machine — look here for workflow numbers like #38';
-      }
-      if (allureBtn && pagesUrl) {
-        allureBtn.href = pagesUrl;
-        allureBtn.style.display = '';
-      } else if (allureBtn) {
-        allureBtn.style.display = 'none';
-      }
-
-      if (ciPayload && ciPayload.error && !runs.length) {
-        root.className = 'empty';
-        root.textContent = (ciPayload && ciPayload.error)
-          ? String(ciPayload.error)
-          : 'No CI runs loaded yet.';
-        return;
-      }
-      if (!runs.length) {
-        root.className = 'empty';
-        root.textContent = 'No CI runs yet. Push or run the workflow from Actions. Open Allure report still works once Pages has a deploy.';
-        return;
-      }
-      root.className = '';
-      root.innerHTML = '';
-      if (ciPayload.actions_url) {
-        const src = document.createElement('div');
-        src.className = 'ci-meta';
-        src.style.marginBottom = '0.75rem';
-        src.innerHTML = `Workflow: <a class="btn-link" style="margin:0" href="${esc(ciPayload.actions_url)}" target="_blank" rel="noopener">Open workflow on GitHub</a>`;
-        root.appendChild(src);
-      }
-      runs.forEach((run) => {
-        const key = String(run.run_number || run.html_url || '');
-        const box = document.createElement('div');
-        box.className = 'run' + (openCiRuns.has(key) ? ' open' : '');
-        const head = document.createElement('div');
-        head.className = 'run-head';
-        const result = run.conclusion || run.status || 'unknown';
-        const actionsLink = run.html_url
-          ? `<a class="btn-link" style="margin:0 0 0 auto" href="${esc(run.html_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Actions run</a>`
-          : `<span class="test-uuid">${esc(result)}</span>`;
-        head.innerHTML = `
-          <strong>#${esc(String(run.run_number || '?'))}</strong>
-          ${ciBadge(run)}
-          <span class="badge">${esc(run.event || '')}</span>
-          <span class="badge">${esc(run.head_branch || '')}</span>
-          <span class="ci-meta">${niceDate(run.created_at)}</span>
-          ${actionsLink}`;
-        head.onclick = () => {
-          if (openCiRuns.has(key)) openCiRuns.delete(key); else openCiRuns.add(key);
-          box.classList.toggle('open');
-        };
-        const body = document.createElement('div');
-        body.className = 'run-body';
-        // Per-run public Pages URL: /runs/<run_id>/ (no GitHub token).
-        const runAllure = run.allure_url || '';
-        let links = '';
-        if (run.html_url) {
-          links += `<a class="btn-link" href="${esc(run.html_url)}" target="_blank" rel="noopener">This run on Actions</a>`;
-        }
-        if (runAllure) {
-          links += `<a class="btn btn-primary" href="${esc(runAllure)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Open Allure report</a>`;
-        }
-        const failHint = (run.conclusion === 'failure')
-          ? `<div class="sub" style="color:#fca5a5;margin:.35rem 0">Failed CI run — Actions for logs; Open Allure is this run's published report.</div>`
-          : '';
-        body.innerHTML = `
-          <div class="ci-meta">${esc(run.display_title || '')}</div>
-          <div class="ci-meta">SHA ${esc(run.head_sha || '—')} · ${esc(result)}</div>
-          ${failHint}
-          <div class="actions" style="margin-top:.5rem">${links}</div>
-          <pre style="margin-top:.75rem;white-space:pre-wrap;word-break:break-word;font-size:.8rem;color:#cbd5e1;background:#020617;border:1px solid #334155;border-radius:6px;padding:.75rem">${esc(JSON.stringify(run, null, 2))}</pre>
-          <p class="ci-note">Open Allure report opens this run from the allure-pages branch (raw.githack) — same on every machine, no login.</p>`;
-        box.appendChild(head);
-        box.appendChild(body);
-        root.appendChild(box);
-      });
-    }
-
-    let ciTimer = null;
-    function scheduleCiRefresh() {
-      if (ciTimer) clearInterval(ciTimer);
-      // Poll public catalog (no GitHub API rate limits).
-      ciTimer = setInterval(() => refreshCi(true), 10000);
-    }
-
-    async function refreshCi(force) {
-      try {
-        const url = force ? '/api/ci-runs?refresh=1' : '/api/ci-runs';
-        ciPayload = await fetch(url).then(r => r.json());
-        renderCiRuns();
-      } catch (err) {
-        ciPayload = { runs: [], error: 'Could not reach local /api/ci-runs', allure_pages_url: '' };
-        renderCiRuns();
-      }
-      scheduleCiRefresh();
-    }
-
     function renderAll() {
       renderRuns();
-      renderCiRuns();
     }
 
     async function loadRuns() {
@@ -478,7 +345,6 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       testRuns = [];
       renderRuns();
     });
-    document.getElementById('btn-refresh-ci').addEventListener('click', () => refreshCi(true));
     document.getElementById('btn-shutdown').addEventListener('click', async () => {
       await fetch('/api/shutdown', { method: 'POST' });
       document.body.innerHTML = '<main class="panel-pad"><h1>Server shut down</h1><p class="sub">You can close this tab.</p></main>';
@@ -489,8 +355,11 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       setTimeout(presenceLoop, 3000);
     }
     presenceLoop();
+    // Clear presence as soon as the tab closes so pytest can reopen the browser.
+    window.addEventListener('pagehide', () => {
+      try { navigator.sendBeacon('/api/presence/leave'); } catch (e) {}
+    });
     renderAll();
-    refreshCi(false);
     setInterval(async () => {
       try {
         await loadRuns();
@@ -552,37 +421,19 @@ class Report:
         self.app.add_url_rule("/api/validate", "validate", self.api_validate, methods=["POST"])
         self.app.add_url_rule("/api/test-runs", "test_runs", self.api_test_runs)
         self.app.add_url_rule("/api/test-runs/clear", "clear_runs", self.api_clear_test_runs, methods=["POST"])
-        self.app.add_url_rule("/api/ci-runs", "ci_runs", self.api_ci_runs)
-        self.app.add_url_rule(
-            "/api/ci-runs/<run_id>/allure",
-            "ci_allure_prepare",
-            self.api_ci_allure_prepare,
-            methods=["POST"],
-        )
-        self.app.add_url_rule(
-            "/ci-allure/<run_id>/",
-            "ci_allure_index",
-            self.ci_allure_index,
-        )
-        self.app.add_url_rule(
-            "/ci-allure/<run_id>/<path:filename>",
-            "ci_allure_file",
-            self.ci_allure_file,
-        )
         self.app.add_url_rule("/api/presence", "presence_ping", self.api_presence_ping, methods=["POST"])
         self.app.add_url_rule("/api/presence", "presence_status", self.api_presence_status, methods=["GET"])
+        self.app.add_url_rule(
+            "/api/presence/leave",
+            "presence_leave",
+            self.api_presence_leave,
+            methods=["POST"],
+        )
         self.app.add_url_rule("/api/shutdown", "shutdown", self.api_shutdown, methods=["POST"])
         self.app.add_url_rule("/api/health", "health", self.api_health)
 
     def api_health(self):
-        """Confirm this process uses the public catalog (not the old GitHub API)."""
-        return jsonify(
-            {
-                "ok": True,
-                "ci_source": "allure-pages/ci-runs.json",
-                "uses_github_api": False,
-            }
-        )
+        return jsonify({"ok": True, "features": ["presence_leave"]})
 
     def write(self, findings):
         """Write machine-readable findings + a static HTML drill-down report."""
@@ -652,8 +503,6 @@ class Report:
         return render_template_string(
             DASHBOARD_HTML,
             test_runs_json=json.dumps(load_runs()),
-            ci_runs_json=json.dumps(CI_RUNS.load()),
-            allure_pages_url=ALLURE_PAGES_URL,
         )
 
     def api_received(self):
@@ -680,38 +529,23 @@ class Report:
         clear_runs()
         return jsonify({"ok": True})
 
-    def api_ci_runs(self):
-        force = request.args.get("refresh") in ("1", "true", "yes")
-        return jsonify(CI_RUNS.load(force=force))
-
-    def api_ci_allure_prepare(self, run_id):
-        """Return the public Allure Pages URL (no GitHub token required)."""
-        result = CI_RUNS.prepare_allure_report(run_id)
-        status = 200 if result.get("ok") else 400
-        return jsonify(result), status
-
-    def ci_allure_index(self, run_id):
-        folder = CI_RUNS.find_allure_index_dir(run_id)
-        if folder is None:
-            return jsonify({"ok": False, "error": "Allure report not loaded yet."}), 404
-        return send_from_directory(folder, "index.html")
-
-    def ci_allure_file(self, run_id, filename):
-        folder = CI_RUNS.find_allure_index_dir(run_id)
-        if folder is None:
-            return jsonify({"ok": False, "error": "Allure report not loaded yet."}), 404
-        return send_from_directory(folder, filename)
 
     def api_presence_ping(self):
         self._last_presence = time.time()
         return jsonify({"ok": True})
+
+    def api_presence_leave(self):
+        """Tab closed — mark inactive immediately so pytest can reopen the browser."""
+        self._last_presence = 0.0
+        return jsonify({"ok": True, "active": False})
 
     def api_presence_status(self):
         if not self._last_presence:
             age = 1e9
         else:
             age = time.time() - self._last_presence
-        return jsonify({"age_seconds": age, "active": age < 8})
+        # Slightly above the 3s ping interval; leave endpoint clears sooner on close.
+        return jsonify({"age_seconds": age, "active": age < 5})
 
     def add_shutdown_hook(self, fn):
         self._shutdown_hooks.append(fn)
