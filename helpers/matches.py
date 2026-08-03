@@ -23,13 +23,13 @@ def positive_fields():
     return steps.compare(load_synthetic_event(), load_expected_types())
 
 
-def _row_type_mismatches(steps, row, schema):
-    """EventsSchema type mismatches on one flat row."""
+def schema_type_mismatches(steps, payload, schema):
+    """EventsSchema fields on payload that do not fit their declared type."""
     bad = []
-    for match in steps.compare(row, schema):
-        if match["field"] in TYPE_SKIP_FIELDS:
+    for match in steps.compare(payload, schema):
+        if match.get("field") in TYPE_SKIP_FIELDS:
             continue
-        if not steps.fits_type(match["actual"], match["expected_type"]):
+        if not steps.fits_type(match.get("actual"), match.get("expected_type")):
             bad.append(match)
     return bad
 
@@ -48,7 +48,7 @@ def type_bad_rule_cases(n=TYPE_BAD_EVENT_COUNT):
     cases = []
     position = 0
     for index, row in enumerate(rows):
-        mismatches = _row_type_mismatches(steps, row, schema)
+        mismatches = schema_type_mismatches(steps, row, schema)
         if not mismatches:
             continue
         position += 1

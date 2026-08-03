@@ -11,13 +11,21 @@ Local pipeline tests: generate synthetic events, POST them to a localhost receiv
 
 ## Quick start (Mac — Docker)
 
-Best path on Mac: use Docker Desktop so you don’t fight local Python/venv differences.
-
 1. Install **[Docker Desktop](https://www.docker.com/products/docker-desktop/)** and start it (whale icon running).
-2. From the project root:
+2. From the project root, create a venv and install dependencies:
 
 ```bash
-python3 run.py docker
+python3 -m venv .venv
+source .venv/bin/activate          # macOS / Linux
+# Windows PowerShell: .\.venv\Scripts\Activate.ps1
+
+python -m pip install -r requirements.txt
+```
+
+3. Start the stack with Docker:
+
+```bash
+python run.py docker
 ```
 
 That starts Docker if needed, builds, and runs the dashboard + receiver at **http://localhost:8080**.
@@ -28,7 +36,7 @@ Source is mounted at `/app`, so local edits show up in the container.
 
 ```bash
 # Full pytest suite inside the container
-python3 run.py docker -- compose --profile test run --rm test
+python run.py docker -- compose --profile test run --rm test
 ```
 
 Open the dashboard in the browser while / after tests: **http://localhost:8080**  
@@ -37,22 +45,14 @@ Open the dashboard in the browser while / after tests: **http://localhost:8080**
 Stop the stack:
 
 ```bash
-python3 run.py docker -- compose down
+python run.py docker -- compose down
 ```
 
 ---
 
-## Local setup (optional — without Docker)
+## Local runs (optional — without Docker)
 
-Create a virtual environment, activate it, then install dependencies:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate          # macOS / Linux
-# Windows PowerShell: .\.venv\Scripts\Activate.ps1
-
-python -m pip install -r requirements.txt
-```
+With the same venv activated (`source .venv/bin/activate`):
 
 ### Dashboard (local)
 

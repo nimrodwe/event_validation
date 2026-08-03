@@ -18,32 +18,17 @@ class Generator:
         verdict,
         rule,
         headers=None,
-        expect=None,
-        target_field=None,
-        changes=None,
-        missing_keys=None,
     ):
         events.append({"case_id": case_id, "event": event})
-        row = {
-            "case_id": case_id,
-            "type": case_type,
-            "intended_verdict": verdict,
-            "target_rule_id": rule,
-            "delivery_headers": headers or {},
-        }
-        # Optional property values the test must still see after GET (negatives).
-        if expect is not None:
-            row["expect"] = expect
-        # Finding.field the target rule must report (negatives).
-        if target_field is not None:
-            row["target_field"] = target_field
-        # [{key, before, after}, …] logged before POST (negatives).
-        if changes is not None:
-            row["changes"] = list(changes)
-        # Keys that must be absent after GET (NEG-MISSING).
-        if missing_keys is not None:
-            row["missing_keys"] = list(missing_keys)
-        manifest.append(row)
+        manifest.append(
+            {
+                "case_id": case_id,
+                "type": case_type,
+                "intended_verdict": verdict,
+                "target_rule_id": rule,
+                "delivery_headers": headers or {},
+            }
+        )
 
     def add_positives(self, events, manifest, base):
         """Unchanged template copy — round-trip / happy-path cases."""

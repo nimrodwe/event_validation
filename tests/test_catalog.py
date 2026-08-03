@@ -25,9 +25,7 @@ def test_negatives(initialize, negatives_receiver, negative):
     Each rule has its own events (new_keys-e1, missing_keys-e1, …).
     Logs every matching key for that case, or nothing to validate.
     """
-    FlowHelper.check_dataset_negative_rule(
-        negatives_receiver, initialize.validator, negative
-    )
+    FlowHelper.check_dataset_negative_rule(negatives_receiver, negative)
 
 
 @pytest.mark.parametrize("boundary", boundary_pytest_params())
@@ -64,9 +62,7 @@ def test_duplicates(initialize, catalog_receiver):
     is blocked with 409 and never stored.
     """
     events, duplicates = initialize.catalog.cases("duplicate")
-    FlowHelper.check_duplicates(
-        catalog_receiver, initialize.validator, duplicates, events
-    )
+    FlowHelper.check_duplicates(catalog_receiver, duplicates, events)
 
 
 def test_replay(initialize, catalog_receiver):

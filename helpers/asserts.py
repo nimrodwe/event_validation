@@ -85,13 +85,6 @@ class AssertHelper:
             body = repr(value)
         allure.attach(body, name=name, attachment_type=allure.attachment_type.JSON)
 
-    def _attach_allure_text(self, name, text):
-        try:
-            import allure
-        except Exception:
-            return
-        allure.attach(str(text), name=name, attachment_type=allure.attachment_type.TEXT)
-
     def _attach_tested_values(self, check, match, result):
         field = match.get("field", "<unknown>")
         expected_type = match.get("expected_type", "<unknown>")
@@ -259,23 +252,6 @@ class AssertHelper:
                 ),
                 ("what we got (actual)", actual),
                 ("what we expected", expected),
-            ],
-            data=data,
-        )
-
-    def not_equal(self, actual, unexpected, message="Values should not be equal", data=None):
-        """Pass if actual is different from unexpected."""
-        if actual != unexpected:
-            return actual
-        self._fail(
-            message,
-            [
-                (
-                    "what went wrong",
-                    "The value we got matched a forbidden value (they must differ).",
-                ),
-                ("what we got (actual)", actual),
-                ("must not equal", unexpected),
             ],
             data=data,
         )

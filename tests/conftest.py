@@ -228,10 +228,8 @@ def initialize(localhost, step_log, request):
             step_log.info("UUID " + text)
 
     AssertHelper.record_uuid = record_uuid
-    base = BaseClass(localhost, step_log)
-    base.record_uuid = record_uuid
     try:
-        yield base
+        yield BaseClass(step_log)
     finally:
         AssertHelper.log = None
         AssertHelper.record_uuid = None

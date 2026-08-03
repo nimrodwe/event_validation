@@ -59,7 +59,6 @@ RULE_SPECS = (
     },
 )
 
-RULE_KINDS = tuple(spec["id"] for spec in RULE_SPECS)
 RULE_TITLE_BY_ID = {spec["id"]: spec["title"] for spec in RULE_SPECS}
 RULE_EXPLAIN_BY_ID = {spec["id"]: spec["explain"] for spec in RULE_SPECS}
 
@@ -395,22 +394,6 @@ def format_rule_finding(item):
         + " | synthetic had "
         + synthetic
     )
-
-
-def summarize_findings(findings):
-    """Count items in a kind list (these kinds are incorrect hits)."""
-    incorrect = sum(1 for f in findings if f.get("result") == "FAIL")
-    ok = len(findings) - incorrect
-    return ok, incorrect
-
-
-def short_rule_name(syn_key, flat_key=None):
-    """Small name piece for keys."""
-    raw = str(flat_key or syn_key).strip()
-    raw = raw.replace("$", "").replace(" ", "")
-    if not raw:
-        raw = "field"
-    return raw[:40]
 
 
 def build_rule_cases(rules=None, n=SAMPLE_SIZE):

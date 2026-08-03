@@ -1,4 +1,4 @@
-"""HTTP client — GET/POST/PUT/DELETE with timeout and retries."""
+"""HTTP client — GET/POST with timeout and retries."""
 
 import time
 
@@ -40,9 +40,3 @@ class HttpClient:
 
     def post(self, url, **kwargs):
         return self.request("POST", url, **kwargs)
-
-    def put(self, url, **kwargs):
-        return self.request("PUT", url, **kwargs)
-
-    def delete(self, url, **kwargs):
-        return self.request("DELETE", url, **kwargs)

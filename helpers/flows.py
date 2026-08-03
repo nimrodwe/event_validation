@@ -43,6 +43,12 @@ class FlowHelper:
     def _log_event_body(self, label, event):
         AssertHelper._log_event_body(label, event)
 
+    def _log_roundtrip_events(self, label, sent, received):
+        """Log full event after POST and after GET (dashboard + Allure)."""
+        prefix = (str(label) + ": ") if label else ""
+        self._log_event_body(prefix + "event after POST", sent)
+        self._log_event_body(prefix + "event after GET", received)
+
     def _fail(self, title, details, data=None):
         AssertHelper._fail(title, details, data=data)
 
@@ -50,22 +56,14 @@ class FlowHelper:
         self._info("expect: " + str(message))
 
     def event_uuid(self, payload):
-        if not isinstance(payload, dict):
-            return None
-        if "UUID" in payload:
-            return payload.get("UUID")
-        props = payload.get("properties")
-        if isinstance(props, dict) and "UUID" in props:
-            return props.get("UUID")
-        return None
+        from src.run_log import event_uuid
+
+        return event_uuid(payload)
 
     def _record_uuid(self, payload):
         uuid = self.event_uuid(payload)
         if self.record_uuid is not None:
             self.record_uuid(uuid)
-
-    def _format(self, value):
-        return AssertHelper._format(value)
 
     def _plain(self, value):
         return AssertHelper._plain(value)
@@ -83,18 +81,6 @@ class FlowHelper:
 
     def _sent_by_id(self, events):
         return {item["case_id"]: item["event"] for item in events}
-
-    def _schema_type_mismatches(self, steps, payload, schema):
-        """EventsSchema fields on payload that do not fit their declared type."""
-        from helpers.matches import TYPE_SKIP_FIELDS
-
-        bad = []
-        for match in steps.compare(payload, schema):
-            if match.get("field") in TYPE_SKIP_FIELDS:
-                continue
-            if not steps.fits_type(match.get("actual"), match.get("expected_type")):
-                bad.append(match)
-        return bad
 
     def catalog_case(self, catalog, case_type, case_id):
         """Load catalog type and require one case_id; returns (events, manifest_row)."""
@@ -143,46 +129,14 @@ class FlowHelper:
         )
         return response
 
-    def _post_invalid(
-        self,
-        receiver,
-        case_id,
-        delivery_headers=None,
-        expected_status=None,
-    ):
-        """POST a body that cannot be decoded — expect 400, nothing stored."""
-        if expected_status is None:
-            expected_status = HttpStatus.BAD_REQUEST
-        headers = {"X-Case-Id": case_id}
-        headers.update(delivery_headers or {})
-        self._info(
-            "POST "
-            + receiver.url
-            + " case_id="
-            + str(case_id)
-            + " (invalid body)"
-        )
-        if delivery_headers:
-            self._info("delivery_headers=" + json.dumps(delivery_headers, default=str))
-        self._info("body=not-valid-base64")
-        response = self.http.post(
-            receiver.url, data=b"not-valid-base64!!!", headers=headers
-        )
-        self._info("status=" + str(response.status_code))
-        AssertHelper.status_code(
-            response,
-            expected_status,
-            case_id + " invalid POST should return " + str(expected_status),
-            data={"case_id": case_id},
-        )
-        return response
-
     def post_get_equals(self, receiver, case_id, sent, record_uuid=True):
         """POST payload, GET it back, assert receiver stored exactly what we sent."""
         self._post_case(
             receiver, case_id, sent, record_uuid=record_uuid
         )
-        return self.received_equals_sent(receiver, case_id, sent)
+        received = self.received_equals_sent(receiver, case_id, sent)
+        self._log_roundtrip_events(case_id, sent, received)
+        return received
 
     def _get_rows(self, receiver, case_id):
         """GET stored rows for one case_id from the receiver API."""
@@ -220,55 +174,6 @@ class FlowHelper:
             return row
         return received
 
-    def all_received_equals_sent(self, receiver, cases, events):
-        """For each case, GET payload must equal the event we POSTed."""
-        sent_by_id = self._sent_by_id(events)
-        for item in cases:
-            case_id = item["case_id"]
-            sent = sent_by_id.get(case_id)
-            AssertHelper.truthy(sent, "Missing sent event for " + case_id)
-            self.received_equals_sent(receiver, case_id, sent)
-
-    def _assert_expect_props(self, case_id, received, expect):
-        """Assert properties on the received event match manifest expect{}."""
-        AssertHelper.truthy(
-            expect,
-            case_id + " manifest is missing expect{} for data checks",
-            data={"case_id": case_id},
-        )
-        props = received.get("properties")
-        AssertHelper.truthy(
-            isinstance(props, dict),
-            case_id + " received event is missing properties dict",
-            data={"case_id": case_id, "received": received},
-        )
-        for key, expected in expect.items():
-            AssertHelper.equal(
-                props.get(key),
-                expected,
-                case_id
-                + ": received properties."
-                + str(key)
-                + " must match expect",
-                data={
-                    "case_id": case_id,
-                    "field": key,
-                    "expected": expected,
-                    "actual": props.get(key),
-                },
-            )
-        if "devicePlatform" in expect and "$os" in expect:
-            AssertHelper.not_equal(
-                props.get("devicePlatform"),
-                props.get("$os"),
-                case_id + ": devicePlatform and $os must differ",
-                data={
-                    "case_id": case_id,
-                    "devicePlatform": props.get("devicePlatform"),
-                    "$os": props.get("$os"),
-                },
-            )
-
     def check_positives(self, receiver, validator, cases, events):
         """POST → GET → same rules as negatives, but findings must be empty."""
         sent_by_id = self._sent_by_id(events)
@@ -282,6 +187,7 @@ class FlowHelper:
             )
             self._post_case(receiver, case_id, sent, item.get("delivery_headers"))
             received = self.received_equals_sent(receiver, case_id, sent)
+            self._log_roundtrip_events(case_id, sent, received)
             findings = [f.to_dict() for f in validator.check_nested(received, case_id)]
             AssertHelper.equal(
                 findings,
@@ -302,6 +208,7 @@ class FlowHelper:
         """
         from helpers.loaders import load_expected_types
         from helpers.logger import format_type_bad_finding
+        from helpers.matches import schema_type_mismatches
 
         short_id = case.get("id") or "?"
         event_label = case.get("event_label") or (
@@ -346,12 +253,9 @@ class FlowHelper:
         else:
             self._info(label + ": using stored GET body from this run")
 
-        self._log_event_body(label + ": event after POST", sent)
-        self._log_event_body(label + ": event after GET", received)
+        self._log_roundtrip_events(label, sent, received)
 
-        all_bad = self._schema_type_mismatches(
-            steps, received, load_expected_types()
-        )
+        all_bad = schema_type_mismatches(steps, received, load_expected_types())
 
         self._info(label + ": found " + str(len(all_bad)) + " bad type(s):")
         for bad in all_bad:
@@ -377,6 +281,7 @@ class FlowHelper:
         import copy
 
         from helpers.logger import format_type_bad_finding
+        from helpers.matches import schema_type_mismatches
 
         sent = copy.deepcopy(event)
         props = sent.setdefault("properties", {})
@@ -406,10 +311,7 @@ class FlowHelper:
             receiver, case_id, sent, record_uuid=True
         )
 
-        self._log_event_body("event after POST", sent)
-        self._log_event_body("event after GET", received)
-
-        bad = self._schema_type_mismatches(steps, received, schema)
+        bad = schema_type_mismatches(steps, received, schema)
         self._info("detected " + str(len(bad)) + " bad field(s):")
         for match in bad:
             self._info(
@@ -430,7 +332,7 @@ class FlowHelper:
         )
         AssertHelper.fits_type(steps, first)
 
-    def check_dataset_negative_rule(self, receiver, validator, case):
+    def check_dataset_negative_rule(self, receiver, case):
         """
         One pytest per (event, named rule) that has hits, e.g. e1-new_keys.
 
@@ -490,8 +392,7 @@ class FlowHelper:
         else:
             self._info(label + ": using stored GET body from this run")
 
-        self._log_event_body(label + ": event after POST", sent)
-        self._log_event_body(label + ": event after GET", received)
+        self._log_roundtrip_events(label, sent, received)
 
         items = apply_kind(received, rules, kind)
         if not items:
@@ -572,8 +473,7 @@ class FlowHelper:
             receiver, case_id, sent, log_body=False
         )
 
-        self._log_event_body(case_id + ": event after POST", sent)
-        self._log_event_body(case_id + ": event after GET", received)
+        self._log_roundtrip_events(case_id, sent, received)
 
         props = received["properties"]
         token = props.get("Appdome fusion app token")
@@ -669,17 +569,6 @@ class FlowHelper:
                 data={"item": item},
             )
 
-    def check_boundary(self, receiver, validator, cases, events):
-        """Run every boundary case (prefer parametrized check_boundary_case in tests)."""
-        AssertHelper.truthy(cases, "No boundary cases in manifest")
-        from helpers.catalog import Catalog
-        from helpers.pytest_cases import BOUNDARY_CASE_IDS
-
-        by_id = Catalog().by_id(cases)
-        for needed in BOUNDARY_CASE_IDS:
-            AssertHelper.has_key(by_id, needed, "Missing " + needed)
-            self.check_boundary_case(receiver, validator, by_id[needed], events)
-
     def check_retries(self, receiver, cases, events):
         """First POST → 500 (server could not accept); retry valid → 200 + GET."""
         AssertHelper.equal(len(cases), 1, "Expected exactly one retry case")
@@ -744,6 +633,8 @@ class FlowHelper:
         row = self.received_equals_sent(
             receiver, case_id, sent, return_row=True
         )
+        received = (row or {}).get("event")
+        self._log_roundtrip_events(case_id + " (retry)", sent, received)
         stored_headers = (row or {}).get("headers") or {}
         AssertHelper.equal(stored_headers.get("Idempotency-Key"), ok_headers["Idempotency-Key"])
         AssertHelper.equal(stored_headers.get("X-Retry-Count"), ok_headers["X-Retry-Count"])
@@ -753,7 +644,7 @@ class FlowHelper:
         )
         self._info(case_id + ": retry passed")
 
-    def check_duplicates(self, receiver, validator, cases, events):
+    def check_duplicates(self, receiver, cases, events):
         """POST first → 200 + GET equals sent; second same body → 409 and not stored."""
         AssertHelper.equal(len(cases), 2, "Expected exactly two duplicate cases")
         sent_by_id = self._sent_by_id(events)
@@ -772,7 +663,8 @@ class FlowHelper:
         self._post_case(
             receiver, first_id, first_sent, first.get("delivery_headers")
         )
-        self.received_equals_sent(receiver, first_id, first_sent)
+        first_received = self.received_equals_sent(receiver, first_id, first_sent)
+        self._log_roundtrip_events(first_id, first_sent, first_received)
 
         second_sent = sent_by_id.get(second_id)
         AssertHelper.truthy(second_sent, "Missing event for " + second_id)
@@ -791,6 +683,8 @@ class FlowHelper:
             first_id,
             "409 should point at the first stored duplicate case",
         )
+        # Blocked POST still logs the event we tried to send (nothing stored).
+        self._log_event_body(second_id + ": event after POST (blocked 409)", second_sent)
 
         # Second case must not appear in the store.
         get_response = self.http.get(receiver.url, params={"case_id": second_id})
@@ -844,7 +738,12 @@ class FlowHelper:
                 "received_events_count": len(received_events),
             },
         )
+        self._log_event_body(case_id + ": event after POST", sent)
         for index, received in enumerate(received_events):
+            self._log_event_body(
+                case_id + ": event after GET (delivery " + str(index + 1) + ")",
+                received,
+            )
             uuid = self.event_uuid(sent) or self.event_uuid(received) or "<missing UUID>"
             AssertHelper.equal(
                 received,

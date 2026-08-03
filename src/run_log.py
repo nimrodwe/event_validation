@@ -298,12 +298,3 @@ class TestRunStore:
             "tests": self.tests,
         }
         self.path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-
-    def load_runs(self, limit=20):
-        return load_runs(limit=limit)
-
-    def clear_runs(self):
-        clear_runs()
-
-    def make_step_logger(self, name, steps):
-        return make_step_logger(name, steps)

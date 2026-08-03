@@ -15,15 +15,6 @@ def quiet_logger(name="parametrize"):
     return logger
 
 
-def type_line(match):
-    """Standard one-line field type message for tests/dashboard."""
-    return (
-        "field=" + match["field"]
-        + " actual=" + repr(match["actual"])
-        + " expected_type=" + match["expected_type"]
-    )
-
-
 def _parse_dataset_datetime(text):
     """Parse validation-dataset datetime strings into datetime when possible."""
     if not isinstance(text, str) or not text.strip():
@@ -133,18 +124,3 @@ class LoggerHelper:
 
     def get(self):
         return self.logger
-
-    def info(self, message):
-        self.logger.info(message)
-
-    def error(self, message):
-        self.logger.error(message)
-
-    def warning(self, message):
-        self.logger.warning(message)
-
-    def type_line(self, match):
-        return type_line(match)
-
-    def collect(self, name="parametrize"):
-        return quiet_logger(name)

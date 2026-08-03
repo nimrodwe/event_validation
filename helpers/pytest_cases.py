@@ -58,7 +58,6 @@ BOUNDARY_CASES = (
         "negative": False,
     },
 )
-BOUNDARY_CASE_IDS = tuple(c["case_id"] for c in BOUNDARY_CASES)
 BOUNDARY_CASE_BY_ID = {c["case_id"]: c for c in BOUNDARY_CASES}
 
 
@@ -69,7 +68,6 @@ def boundary_pytest_params():
 
 # One pytest case each (see test_negatives) — new_keys-e1, missing_keys-e1, …
 NEGATIVE_CASES = NEGATIVE_RULE_CASES
-NEGATIVE_CASE_IDS = tuple(c["id"] for c in NEGATIVE_CASES)
 
 
 def negative_pytest_params():

@@ -1,16 +1,9 @@
-import base64
-import json
 import re
 
-from services.http_client import HttpClient
 from helpers.type_validator import TypeValidator
 
 
 class SyntheticSteps(TypeValidator):
-    def __init__(self, logger):
-        super().__init__(logger)
-        self.http = HttpClient(timeout=5, retries=3)
-
     def compare(self, event, schema):
         props = event.get("properties", {})
 
@@ -26,16 +19,3 @@ class SyntheticSteps(TypeValidator):
             matches.append({"field": name, "actual": value, "expected_type": types[name]})
 
         return matches
-
-    def send(self, event, localhost, case_id="POS-SYNTHETIC"):
-        """POST the synthetic event to localhost."""
-        self.log.info("POST " + localhost.url)
-        self.log.info(json.dumps(event))
-        body = base64.b64encode(json.dumps(event).encode("utf-8"))
-        response = self.http.post(
-            localhost.url,
-            data=body,
-            headers={"X-Case-Id": case_id},
-        )
-        self.log.info("status=" + str(response.status_code))
-        return response

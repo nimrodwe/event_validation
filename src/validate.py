@@ -307,10 +307,6 @@ class Validator:
             result.append(f.to_dict())
         return result
 
-    def _dupe_fingerprint(self, event):
-        """Serialize event body for near-dupe match — all fields except identity/noise."""
-        return dupe_fingerprint(event)
-
     def check_received_dupes(self, items):
         """Flag received nested events whose payload matches (UUID / noise skipped)."""
         groups = {}
