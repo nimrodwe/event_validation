@@ -1,7 +1,5 @@
 """Pytest case lists for @pytest.mark.parametrize (boundary, negatives, types)."""
 
-import pytest
-
 from helpers import matches
 from helpers.dataset_negatives import NEGATIVE_RULE_CASES
 
@@ -12,6 +10,8 @@ _TEMPLATE_TOKEN = "11111111-1111-4111-8111-111111111111"
 
 def _params(cases, *, id_key="id", always_negative=False, negative_key=None):
     """Build pytest.param list; optional @pytest.mark.negative for (N) tags."""
+    import pytest
+
     params = []
     for case in cases:
         is_negative = always_negative or (
@@ -101,14 +101,27 @@ def type_bad_pytest_params():
 
 # Intentional corruptions on synthetic event (property key → bad value).
 # Keys must exist on synthetic AND map into EventsSchema.
-CORRUPT_FIELD_CASES = (
-    pytest.param((("UUID", 12345),), id="one-field"),
-    pytest.param(
-        (
+_CORRUPT_FIELD_RAW = (
+    {
+        "id": "one-field",
+        "corruptions": (("UUID", 12345),),
+    },
+    {
+        "id": "three-fields",
+        "corruptions": (
             ("UUID", 12345),
             ("Appdome fusion app token", 999),
             ("devicePlatform", ["Android"]),
         ),
-        id="three-fields",
-    ),
+    },
 )
+
+
+def corrupt_field_pytest_params():
+    """pytest.param list for intentional synthetic field corruption cases."""
+    import pytest
+
+    return [
+        pytest.param(case["corruptions"], id=case["id"])
+        for case in _CORRUPT_FIELD_RAW
+    ]

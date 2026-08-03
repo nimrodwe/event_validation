@@ -1,7 +1,11 @@
 import pytest
 
 from helpers.asserts import AssertHelper
-from helpers.pytest_cases import CORRUPT_FIELD_CASES, TypeParams, type_bad_pytest_params
+from helpers.pytest_cases import (
+    TypeParams,
+    corrupt_field_pytest_params,
+    type_bad_pytest_params,
+)
 
 
 @pytest.mark.parametrize("field", TypeParams.POSITIVE_FIELD_NAMES)
@@ -32,7 +36,7 @@ def test_type_bad(initialize, type_bad_receiver, case):
 
 
 @pytest.mark.negative
-@pytest.mark.parametrize("corruptions", CORRUPT_FIELD_CASES)
+@pytest.mark.parametrize("corruptions", corrupt_field_pytest_params())
 def test_corrupted_fields_fail(initialize, catalog_receiver, corruptions):
     """
     Corrupt one or more synthetic fields, POST→GET, detect the bad fields, then

@@ -6,16 +6,11 @@ import shutil
 import subprocess
 import sys
 
-from helpers.generator import Generator
-from src.config import OUT
-from src.pipeline import Sender
-from src.receiver import Receiver, connect as connect_receiver
-from src.report import Report
-from src.validate import Validator
-
 
 def run_allure():
     """Run pytest with Allure results, then open the local Allure report."""
+    from src.config import OUT
+
     results = OUT / "allure-results"
     results.mkdir(parents=True, exist_ok=True)
 
@@ -55,12 +50,20 @@ def run_docker(docker_args):
 
 class App:
     def __init__(self):
+        from helpers.generator import Generator
+        from src.pipeline import Sender
+        from src.report import Report
+        from src.validate import Validator
+
         self.generator = Generator()
         self.sender = Sender()
         self.validator = Validator()
         self.report = Report()
 
     def run_all(self):
+        from src.config import OUT
+        from src.receiver import connect as connect_receiver
+
         received_dir = OUT / "received"
         if received_dir.exists():
             shutil.rmtree(received_dir)
@@ -72,7 +75,9 @@ class App:
             self.sender.send(OUT / "generated", server.port)
 
             findings = self.validator.validate_dataset()
-            received_findings = self.validator.validate_received(received_dir / "events.jsonl")
+            received_findings = self.validator.validate_received(
+                received_dir / "events.jsonl"
+            )
             findings = findings + received_findings
 
             self.report.write(findings)
@@ -97,7 +102,16 @@ def main():
         "cmd",
         nargs="?",
         default="stack",
-        choices=["all", "gen", "validate", "serve", "dashboard", "stack", "allure", "docker"],
+        choices=[
+            "all",
+            "gen",
+            "validate",
+            "serve",
+            "dashboard",
+            "stack",
+            "allure",
+            "docker",
+        ],
         help="Command to run (default: stack = dashboard + receiver)",
     )
     parser.add_argument("--port", type=int, default=8765)
@@ -110,6 +124,35 @@ def main():
     )
     args = parser.parse_args()
 
+    # Docker path must not import pytest/flask — Mac hosts often have neither.
+    if args.cmd == "docker":
+        sys.exit(run_docker(args.docker_args))
+
+    if args.cmd == "allure":
+        sys.exit(run_allure())
+
+    if args.cmd == "stack":
+        from src.local_stack import LocalStack
+
+        LocalStack().run(open_browser=not args.no_open)
+        return
+
+    if args.cmd == "serve":
+        from src.config import OUT
+        from src.receiver import Receiver
+
+        Receiver(OUT / "received").start(args.port, blocking=True)
+        return
+
+    if args.cmd == "dashboard":
+        from src.report import Report
+
+        port = 8080
+        if args.port != 8765:
+            port = args.port
+        Report().serve(port, open_browser=not args.no_open)
+        return
+
     app = App()
 
     if args.cmd == "gen":
@@ -118,41 +161,20 @@ def main():
         return
 
     if args.cmd == "validate":
+        from src.config import OUT
+
         findings = app.validator.validate_dataset()
-        findings = findings + app.validator.validate_received(OUT / "received" / "events.jsonl")
+        findings = findings + app.validator.validate_received(
+            OUT / "received" / "events.jsonl"
+        )
         app.report.write(findings)
         if not app.validator.golden_ok(findings):
             sys.exit(1)
         print("Golden OK: 26 defect rows")
         return
 
-    if args.cmd == "serve":
-        Receiver(OUT / "received").start(args.port, blocking=True)
-        return
-
-    if args.cmd == "dashboard":
-        port = 8080
-        if args.port != 8765:
-            port = args.port
-        open_browser = not args.no_open
-        app.report.serve(port, open_browser)
-        return
-
-    if args.cmd == "stack":
-        from src.local_stack import LocalStack
-
-        LocalStack().run(open_browser=not args.no_open)
-        return
-
-    if args.cmd == "allure":
-        sys.exit(run_allure())
-
-    if args.cmd == "docker":
-        sys.exit(run_docker(args.docker_args))
-
     # cmd == all
-    code = app.run_all()
-    sys.exit(code)
+    sys.exit(app.run_all())
 
 
 if __name__ == "__main__":
