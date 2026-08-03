@@ -12,12 +12,12 @@ These tests are **not** the catalog (`events.json` / `manifest.json`). They use:
 
 | Doc | Test | Touches server? | What it proves |
 |-----|------|-----------------|----------------|
-| [01-test_type_ok.md](01-test_type_ok.md) | `test_type_ok` | Yes | POST→GET synthetic event, then field fits schema type |
-| [02-test_type_bad.md](02-test_type_bad.md) | `test_type_bad` | Yes | 10 events vs EventsSchema (`e1` … `e10`, all bad fields once) |
+| [01-test_type_ok.md](01-test_type_ok.md) | `test_type_ok` | Yes | POST→GET synthetic; field **fits** schema type |
+| [02-test_type_bad.md](02-test_type_bad.md) | `test_type_bad` | Yes | 10 corrupted events; wrong type → **PASS** (negative) |
+| [03-test_corrupted_fields_fail.md](03-test_corrupted_fields_fail.md) | `test_corrupted_fields_fail` | Yes | Intentional corruption → `fits_type` **FAIL** (demo) |
 
-Both type tests POST the payload and GET it back so the receiver stored the right data, then run the schema type assert.
-
-Catalog docs: [`../catalog_tests/`](../catalog_tests/README.md)
+Catalog docs: [`../catalog_tests/`](../catalog_tests/README.md)  
+Interview walkthrough: [`../interview.html`](../interview.html)
 
 ## Shared idea
 
@@ -25,14 +25,17 @@ Catalog docs: [`../catalog_tests/`](../catalog_tests/README.md)
 flowchart LR
   schema[EventsSchema.json]
   good[synthetic_event_template.json]
-  bad[validation_dataset first row]
+  bad[validation_dataset rows]
   typeOk[test_type_ok]
   typeBad[test_type_bad]
+  corrupt[test_corrupted_fields_fail]
 
   schema --> typeOk
   good --> typeOk
   schema --> typeBad
   bad --> typeBad
+  schema --> corrupt
+  good --> corrupt
 ```
 
-**Type tests** POST→GET the fixture payload through the local receiver, then check field types against the schema.
+**Type tests** POST→GET through the local receiver, then check field types against the schema.

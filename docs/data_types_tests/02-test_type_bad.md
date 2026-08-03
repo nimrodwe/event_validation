@@ -1,9 +1,10 @@
 # `test_type_bad`
 
 **File:** `tests/test_data_types.py`  
-**Helper:** `FlowHelper.check_type_bad_case`  
+**Helper:** `AssertHelper.check_type_bad_case` → `FlowHelper.check_type_bad_case`  
 **Data:** 10 validation-dataset events + `EventsSchema.json`  
-**Parametrize:** one test per event — `e1` … `e10`
+**Parametrize:** one test per event — `e1` … `e10`  
+**Mark:** negative `(N)` — wrong type after GET is the success case
 
 ---
 
@@ -16,7 +17,8 @@
 1. Scan validation dataset → events that fail `fits_type`  
 2. POST → GET that raw row  
 3. Log **event after POST**, then **event after GET**  
-4. Validate the **GET body** vs EventsSchema — list every failing field + `total=`
+4. Validate the **GET body** vs EventsSchema — list every failing field + `total=`  
+5. Confirm each listed field is still a mismatch (`type_mismatch`)
 
 ## Dashboard
 

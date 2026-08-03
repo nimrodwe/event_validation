@@ -18,6 +18,16 @@ Simulate a server failure on the first send, then a retry with the same event. P
 
 ---
 
+## Test body
+
+```python
+def test_retry(initialize, catalog_receiver):
+    events, retries = initialize.catalog.cases("retry")
+    FlowHelper.check_retries(catalog_receiver, retries, events)
+```
+
+---
+
 ## What success means
 
 - First POST → `status=500`, GET for that `case_id` is empty.  

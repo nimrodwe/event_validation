@@ -16,7 +16,7 @@
 
 ## High level
 
-`@parametrize` runs the same test body once per edge. Negative edges carry `@pytest.mark.negative` so the dashboard shows the yellow `(N)` tag. Each run loads the boundary catalog, picks that one manifest row, POST→GET, then case-specific asserts.
+`@parametrize` runs the same test body once per edge. Negative edges carry `@pytest.mark.negative` so the dashboard shows the yellow `(N)` tag. Each run loads one boundary case, POST→GET, then case-specific asserts.
 
 ---
 
@@ -25,14 +25,13 @@
 ```python
 @pytest.mark.parametrize("boundary", boundary_pytest_params())
 def test_boundary(initialize, catalog_receiver, boundary):
-    case_id = boundary["case_id"]
-    events, boundaries = initialize.catalog.cases("boundary")
-    by_id = {item["case_id"]: item for item in boundaries}
-    AssertHelper.has_key(by_id, case_id, ...)
-    AssertHelper.check_boundary_case(
+    events, item = FlowHelper.catalog_case(
+        initialize.catalog, "boundary", boundary["case_id"]
+    )
+    FlowHelper.check_boundary_case(
         catalog_receiver,
         initialize.validator,
-        by_id[case_id],
+        item,
         events,
         changed_key=boundary["key"],
         changed_value=boundary["value"],

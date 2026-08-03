@@ -2,7 +2,7 @@
 
 **File:** `tests/test_catalog.py`  
 **Helper:** `FlowHelper.check_dataset_negative_rule`  
-**Learn from:** synthetic template  
+**Learn from:** synthetic template vs flat validation rows  
 
 Each rule has **its own** event-1 … event-10 list.
 
@@ -41,7 +41,5 @@ test_negatives
 ```python
 @pytest.mark.parametrize("negative", negative_pytest_params())
 def test_negatives(initialize, negatives_receiver, negative):
-    AssertHelper.check_dataset_negative_rule(
-        negatives_receiver, initialize.validator, negative
-    )
+    FlowHelper.check_dataset_negative_rule(negatives_receiver, negative)
 ```

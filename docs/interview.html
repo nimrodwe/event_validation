@@ -226,7 +226,7 @@
       </div>
       <div class="card">
         <strong>Two suites</strong>
-        <p><b>Catalog</b> — case types (POS/NEG/BND/…). <b>Data types</b> — each schema field fits (or deliberately doesn’t).</p>
+        <p><b>Catalog</b> — POS / 4 negative rules / BND / retry / dup / replay. <b>Data types</b> — <code>type_ok</code>, <code>type_bad</code>, plus intentional <code>corrupted_fields_fail</code>.</p>
       </div>
       <div class="card">
         <strong>Extras</strong>
@@ -459,8 +459,8 @@
         <h3>Test file</h3>
         <pre>@pytest.mark.parametrize("negative", negative_pytest_params())
 # → test_negatives[new_keys-e1] … [value_got_empty-e10]
-def test_negatives(…, negative):
-    FlowHelper.check_dataset_negative_rule(…)</pre>
+def test_negatives(initialize, negatives_receiver, negative):
+    FlowHelper.check_dataset_negative_rule(negatives_receiver, negative)</pre>
         <div class="debug">
           <strong>Four rules (learned from synthetic vs validation row)</strong>
           <div class="dbg-row">
@@ -556,8 +556,14 @@ def test_negatives(…, negative):
 # → test_boundary[time=-1]                         (N)
 # → test_boundary[Appdome fusion app token (len=29)] (N)
 # → test_boundary[Appdome fusion app token (len=30)]
-def test_boundary(…, boundary):
-    … FlowHelper.check_boundary_case(…, changed_key=boundary["key"], changed_value=boundary["value"])</pre>
+def test_boundary(initialize, catalog_receiver, boundary):
+    events, item = FlowHelper.catalog_case(
+        initialize.catalog, "boundary", boundary["case_id"]
+    )
+    FlowHelper.check_boundary_case(
+        catalog_receiver, initialize.validator, item, events,
+        changed_key=boundary["key"], changed_value=boundary["value"],
+    )</pre>
         <div class="debug">
           <strong>Parametrize → named by the key / edge we changed</strong>
           <div class="dbg-row">
@@ -649,11 +655,9 @@ def test_boundary(…, boundary):
         <h3>Test file</h3>
         <pre>def test_duplicates(initialize, catalog_receiver):
     events, duplicates = initialize.catalog.cases("duplicate")
-    FlowHelper.check_duplicates(
-        catalog_receiver, initialize.validator, duplicates, events
-    )</pre>
+    FlowHelper.check_duplicates(catalog_receiver, duplicates, events)</pre>
         <h3>helpers/flows.py — check_duplicates</h3>
-        <pre>def check_duplicates(self, receiver, validator, cases, events):
+        <pre>def check_duplicates(self, receiver, cases, events):
     self.equal(len(cases), 2, …)
     # first: POST 200 + GET equals sent
     self._post_case(receiver, "DUP-0001", sent, …)
@@ -935,7 +939,7 @@ def test_type_ok(initialize, catalog_receiver, field):
       </summary>
       <div class="body">
         <h3>0) Parametrize — one pytest per event</h3>
-        <pre># for case in type_bad_rule_cases():   # e1 … e10
+        <pre># for case in type_bad_pytest_params():   # e1 … e10
 #     run test_type_bad(…, case)</pre>
         <div class="debug">
           <div class="dbg-row">
@@ -965,6 +969,45 @@ def test_type_ok(initialize, catalog_receiver, field):
               <code>datetime got='July 14, 2026, 16:43:11' (str) expected=datetime(2026, 7, 14, 16, 43, 11) … result=PASS</code><br>
               <code>tda got='{"trueos…' (str) expected=dict / Map(String, String) — not a JSON string … result=PASS</code><br>
               <code>total=3</code> — negative test: wrong type is the success case.
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <details class="test">
+      <summary>
+        <span class="t-name">test_corrupted_fields_fail</span>
+        <span class="t-brief">Intentional FAIL — corrupt synthetic fields, then fits_type must fail.</span>
+        <span class="t-data"><span class="pill">demo</span> one-field · three-fields</span>
+      </summary>
+      <div class="body">
+        <h3>Test file</h3>
+        <pre>@pytest.mark.negative
+@pytest.mark.parametrize("corruptions", corrupt_field_pytest_params())
+def test_corrupted_fields_fail(initialize, catalog_receiver, corruptions):
+    AssertHelper.check_corrupted_fields(
+        catalog_receiver, initialize.synthetic_steps,
+        initialize.expected_types, initialize.synthetic_dataset, corruptions,
+    )</pre>
+        <div class="debug">
+          <strong>Failure-path demo (suite is not fully green on purpose)</strong>
+          <div class="dbg-row">
+            <div class="dbg-cmd">Corrupt properties</div>
+            <div class="dbg-out">
+              <code>one-field</code>: <code>UUID=12345</code> (int)<br>
+              <code>three-fields</code>: UUID + token + devicePlatform bad types
+            </div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">POST → GET</div>
+            <div class="dbg-out">Round-trip the corrupted payload · <span class="ok">pass</span></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">fits_type on a bad field</div>
+            <div class="dbg-out">
+              Must <span style="color:#f87171">FAIL</span> — proves assert / dashboard / Allure error path.
+              Skip with <code>pytest -k "not corrupted"</code> for a green run.
             </div>
           </div>
         </div>

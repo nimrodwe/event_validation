@@ -7,7 +7,9 @@ Local pipeline tests: generate synthetic events, POST them to a localhost receiv
 | Suite | File | Checks |
 | ----- | ---- | ------ |
 | Catalog | `tests/test_catalog.py` | Positives, negatives (4 rules × events), boundary, retry, duplicate, replay |
-| Data types | `tests/test_data_types.py` | EventsSchema types on synthetic (`type_ok`) and corrupted validation rows (`type_bad`) |
+| Data types | `tests/test_data_types.py` | `type_ok`, `type_bad`, plus intentional `test_corrupted_fields_fail` (expected red) |
+
+Docs: [`docs/interview.html`](docs/interview.html) · [`docs/catalog_tests/`](docs/catalog_tests/README.md) · [`docs/data_types_tests/`](docs/data_types_tests/README.md)
 
 ## Quick start (Mac — Docker)
 
@@ -97,7 +99,7 @@ Shared pattern for most cases: **POST** event → **GET** it back → assert on 
 | Test | What it does | Rules / setup | What it asserts |
 | ---- | ------------ | ------------- | --------------- |
 | `test_positives` | POST unchanged synthetic template (`POS-0001`) | Nested validator rules (`check_nested`) | GET body equals sent; **no** nested findings |
-| `test_negatives` | POST validation-dataset rows; compare to synthetic keys | Four named rules (below), up to 10 events each | After GET: list hits for that rule (or `nothing to validate`) |
+| `test_negatives` | POST validation-dataset rows; compare to synthetic keys | Four named rules (below), up to 10 events each `(N)` | After GET: list hits for that rule (or `nothing to validate`) |
 | `test_boundary` | POST synthetic with one edge change | `time=0`, `time=-1`, token len 29, token len 30 | Changed value still present after GET; edge rule fires or not as expected |
 | `test_retry` | First POST forced to fail, then retry | Attempt 1 → 500; attempt 2 → 200 | Nothing stored after 500; after retry GET equals sent |
 | `test_duplicates` | Same body twice | Receiver fingerprint / duplicate block | First POST 200 + GET ok; second POST **409**, not stored |
@@ -131,5 +133,12 @@ Log order for negatives: **event after POST** → **event after GET** → **find
 | ---- | ------------ | ----- | --------------- |
 | `test_type_ok` | One pytest per EventsSchema-mapped field on the **synthetic** event | `EventsSchema.json` type for that field | POST→GET equals sent; value **fits** schema type |
 | `test_type_bad` | One pytest per event (`e1`…`e10`) from the **corrupted** validation dataset | Same EventsSchema; fields that already fail `fits_type` | POST→GET; list all bad types on GET body (`got` vs `expected`); wrong type → **PASS** (negative test) |
+| `test_corrupted_fields_fail` | Corrupt synthetic fields on purpose (`one-field`, `three-fields`) | Same EventsSchema | Detect bad types after GET, then `fits_type` → **FAIL** (failure-path demo) |
 
 Typical `type_bad` fields: `datetime` / `mp_processing_time_ms` (string vs `DateTime64`), `tda` (JSON string vs `Map(String, String)`).
+
+Green suite without the intentional failures:
+
+```bash
+python -m pytest -k "not corrupted" -v
+```

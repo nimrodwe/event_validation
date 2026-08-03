@@ -18,9 +18,8 @@
 |--------|-----------|------------------------|
 | Count | Exactly **2** | Any non-empty (or fixed BND set) |
 | Second POST | **409 Conflict** (not stored) | Expected **200** |
-| Enforcement | Receiver body fingerprint (`UUID` skipped) | Negatives: `check_nested` + `target_rule_id` |
-| Needs both rows together | **No** — second never lands | No |
-| Outer `truthy` in test? | **No** | Yes for pos/neg |
+| Enforcement | Receiver body fingerprint (`UUID` / noise skipped) | Rule findings on GET body |
+| Needs both rows together | **Yes** — first stored, second blocked | No |
 
 Retry / replay may still store the same body when `Idempotency-Key` or `X-Replay` is set.
 
@@ -28,63 +27,22 @@ Retry / replay may still store the same body when `Idempotency-Key` or `X-Replay
 
 ## High level
 
-Load the duplicate pair → POST first (200 + GET equals sent) → POST second (409, `blocked`) → GET second case_id returns no rows.
+Load the duplicate pair → POST first (200 + GET equals sent) → POST second (409, `blocked`) → GET second `case_id` returns no rows.
 
 ---
 
-## Test body — line by line
+## Test body
 
 ```python
 def test_duplicates(initialize, catalog_receiver):
-```
-
-- Same fixtures.
-
-```python
     events, duplicates = initialize.catalog.cases("duplicate")
+    FlowHelper.check_duplicates(catalog_receiver, duplicates, events)
 ```
-
-- Filter `"duplicate"`.
-
-```python
-    AssertHelper.check_duplicates(
-        catalog_receiver, initialize.validator, duplicates, events
-    )
-```
-
-- No outer `truthy`.
-
----
-
-## Inside `check_duplicates` — step by step
-
-```python
-self.equal(len(cases), 2, "Expected exactly two duplicate cases")
-```
-
-- Pair required.
-
-```python
-self._post_case(..., first_id, first_sent, ...)
-self.received_equals_sent(...)
-```
-
-- First delivery accepted and round-trips.
-
-```python
-self._post_case(..., second_id, second_sent, ..., expected_status=HttpStatus.CONFLICT)
-```
-
-- Second same body → **409**; receipt has `decode_status: "duplicate"`, `blocked: true`, `duplicate_of_case_id` = first.
-
-```python
-GET ?case_id=DUP-0002 → events == []
-```
-
-- Blocked POST must not appear in the store.
 
 ---
 
 ## What success means
 
-The receiver is idempotent for plain duplicate bodies: first wins, second is rejected with 409.
+- First POST → `200`, GET body equals sent.  
+- Second POST (same body) → `409`, `decode_status=duplicate`, `blocked=true`.  
+- Second `case_id` is **not** in the store.
