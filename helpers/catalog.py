@@ -29,6 +29,10 @@ class Catalog:
     def cases_of_type(self, manifest, case_type):
         return [item for item in manifest if item.get("type") == case_type]
 
+    def by_id(self, cases):
+        """Map case_id → manifest row."""
+        return {item["case_id"]: item for item in cases}
+
     def make_with_events(self, out_dir):
         generated_dir = self.generate(out_dir)
         return generated_dir, self.load_manifest(generated_dir), self.load_events(generated_dir)
@@ -42,3 +46,8 @@ class Catalog:
         cases = self.cases_of_type(manifest, case_type)
         shutil.rmtree(out_dir if cleanup else generated_dir, ignore_errors=True)
         return events, cases
+
+    def case(self, case_type, case_id, out_dir=None):
+        """events + one manifest row for case_id (row is None if missing)."""
+        events, cases = self.cases(case_type, out_dir=out_dir)
+        return events, self.by_id(cases).get(case_id)

@@ -7,13 +7,13 @@ These tests are **not** the catalog (`events.json` / `manifest.json`). They use:
 | File | Role |
 |------|------|
 | `data/synthetic_event_template.json` | Good nested event (positive types) |
-| `data/validation_dataset_intentionally_corrupted.json` | Bad flat row — first row only (negative types) |
+| `data/validation_dataset_intentionally_corrupted.json` | 10 events with bad types (`e1` … `e10`) |
 | `data/EventsSchema.json` | Expected field types (not a live DB) |
 
 | Doc | Test | Touches server? | What it proves |
 |-----|------|-----------------|----------------|
 | [01-test_type_ok.md](01-test_type_ok.md) | `test_type_ok` | Yes | POST→GET synthetic event, then field fits schema type |
-| [02-test_type_bad.md](02-test_type_bad.md) | `test_type_bad` | Yes | POST→GET validation row, then field fails schema type |
+| [02-test_type_bad.md](02-test_type_bad.md) | `test_type_bad` | Yes | 10 events vs EventsSchema (`e1` … `e10`, all bad fields once) |
 
 Both type tests POST the payload and GET it back so the receiver stored the right data, then run the schema type assert.
 

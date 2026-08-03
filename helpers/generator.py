@@ -20,6 +20,8 @@ class Generator:
         headers=None,
         expect=None,
         target_field=None,
+        changes=None,
+        missing_keys=None,
     ):
         events.append({"case_id": case_id, "event": event})
         row = {
@@ -35,79 +37,35 @@ class Generator:
         # Finding.field the target rule must report (negatives).
         if target_field is not None:
             row["target_field"] = target_field
+        # [{key, before, after}, …] logged before POST (negatives).
+        if changes is not None:
+            row["changes"] = list(changes)
+        # Keys that must be absent after GET (NEG-MISSING).
+        if missing_keys is not None:
+            row["missing_keys"] = list(missing_keys)
         manifest.append(row)
 
     def add_positives(self, events, manifest, base):
         """Unchanged template copy — round-trip / happy-path cases."""
         self._add(events, manifest, "POS-0001", copy.deepcopy(base), "positive", "valid", "NONE")
 
-    def add_negatives(self, events, manifest, base):
-        """Broken fields — each targets a specific validation rule.
-
-        Keep the synthetic template UUID except NEG-UUID (must be empty for REQ-UUID).
-        """
-        bad = copy.deepcopy(base)
-        bad["properties"]["UUID"] = ""
-        self._add(
-            events,
-            manifest,
-            "NEG-UUID",
-            bad,
-            "negative",
-            "invalid",
-            "REQ-UUID",
-            expect={"UUID": ""},
-            target_field="UUID",
-        )
-
-        bad = copy.deepcopy(base)
-        bad["properties"]["Threatcode"] = None
-        self._add(
-            events,
-            manifest,
-            "NEG-TYPE",
-            bad,
-            "negative",
-            "invalid",
-            "REQ-Threatcode",
-            expect={"Threatcode": None},
-            target_field="Threatcode",
-        )
-
-        bad = copy.deepcopy(base)
-        bad["properties"]["__bad"] = 1
-        self._add(
-            events,
-            manifest,
-            "NEG-SCHEMA",
-            bad,
-            "negative",
-            "invalid",
-            "SCHEMA",
-            expect={"__bad": 1},
-            target_field="__bad",
-        )
-
-        bad = copy.deepcopy(base)
-        bad["properties"]["devicePlatform"] = "Android"
-        bad["properties"]["$os"] = "iOS"
-        self._add(
-            events,
-            manifest,
-            "NEG-XFIELD",
-            bad,
-            "negative",
-            "invalid",
-            "XFIELD-OS",
-            expect={"devicePlatform": "Android", "$os": "iOS"},
-            target_field="platform/$os",
-        )
-
     def add_boundary(self, events, manifest, base):
-        """Edge values (time=0, token length short / at min). UUID stays from template."""
+        """Edge values (time=0 / -1, token length short / at min). UUID stays from template."""
         event = copy.deepcopy(base)
         event["properties"]["time"] = 0
         self._add(events, manifest, "BND-0001", event, "boundary", "valid", "NONE")
+
+        bad_time = copy.deepcopy(base)
+        bad_time["properties"]["time"] = -1
+        self._add(
+            events,
+            manifest,
+            "BND-TIME-NEG",
+            bad_time,
+            "boundary",
+            "invalid",
+            "RANGE-time",
+        )
 
         short = copy.deepcopy(base)
         short["properties"]["Appdome fusion app token"] = "x" * 29
@@ -124,27 +82,17 @@ class Generator:
         self._add(events, manifest, "DUP-0002", copy.deepcopy(dup), "duplicate", "valid", "NONE")
 
     def add_retries(self, events, manifest, base):
-        """Same template payload twice with retry headers."""
+        """One valid event for retry: first POST fails (500), second succeeds (200)."""
         event = copy.deepcopy(base)
         self._add(
             events,
             manifest,
             "RTY-0001",
-            copy.deepcopy(event),
+            event,
             "retry",
             "valid",
             "NONE",
             {"Idempotency-Key": "k1", "X-Retry-Count": "1"},
-        )
-        self._add(
-            events,
-            manifest,
-            "RTY-0002",
-            copy.deepcopy(event),
-            "retry",
-            "valid",
-            "NONE",
-            {"Idempotency-Key": "k1", "X-Retry-Count": "2"},
         )
 
     def add_replays(self, events, manifest, base):
@@ -183,7 +131,6 @@ class Generator:
         manifest = []
 
         self.add_positives(events, manifest, base)
-        self.add_negatives(events, manifest, base)
         self.add_boundary(events, manifest, base)
         self.add_duplicates(events, manifest, base)
         self.add_retries(events, manifest, base)

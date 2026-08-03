@@ -1,62 +1,41 @@
 # `test_type_bad`
 
 **File:** `tests/test_data_types.py`  
-**Parametrize:** one pytest case per field in `TypeParams.NEGATIVE_FIELDS`  
-**Data:** first row of `validation_dataset_intentionally_corrupted.json` + `EventsSchema.json`  
-**Server:** yes — POST→GET via `catalog_receiver`
-
----
-
-## How this differs from the others
-
-| Topic | This test | `test_type_ok` |
-|--------|-----------|----------------|
-| Source row | Corrupted flat dataset (first row) | Good nested synthetic |
-| Which fields | Only fields that **already** fail `fits_type` | All schema-mapped synthetic fields |
-| Assert helper | `type_mismatch` (must **not** fit) | `fits_type` (must fit) |
-| Hits localhost? | Yes (POST→GET; no UUID label) | Yes (POST→GET + synthetic UUID) |
+**Helper:** `FlowHelper.check_type_bad_case`  
+**Data:** 10 validation-dataset events + `EventsSchema.json`  
+**Parametrize:** one test per event — `e1` … `e10`
 
 ---
 
 ## High level
 
-POST the corrupted row, GET it back and assert equality, then for each already-wrong field assert it still fails the schema type check.
+**10 events.** Each event is one pytest that lists **all** bad typed fields once (no per-field folders).
 
-How the param list is built:
+**No transforms** — the row from the validation dataset is POSTed exactly as loaded.
 
-1. Load first corrupted row + EventsSchema  
-2. `DatasetSteps.compare` → all overlapping fields  
-3. Keep only those where `fits_type` is already false → `TypeParams.NEGATIVE_FIELDS`
+1. Scan validation dataset → events that fail `fits_type`  
+2. POST → GET that raw row  
+3. Log **event after POST**, then **event after GET**  
+4. Validate the **GET body** vs EventsSchema — list every failing field + `total=`
+
+## Dashboard
+
+```
+test_type_bad
+  event-1
+    bad types
+  event-2
+    …
+```
 
 ---
 
-## Test body — line by line
+## Test body
 
 ```python
-@pytest.mark.parametrize("match", TypeParams.NEGATIVE_FIELDS, ids=ParamIds.field_id)
-def test_type_bad(initialize, match):
+@pytest.mark.parametrize("case", type_bad_pytest_params())
+def test_type_bad(initialize, type_bad_receiver, case):
+    AssertHelper.check_type_bad_case(
+        type_bad_receiver, initialize.dataset_steps, case
+    )
 ```
-
-- One run per known-bad field (e.g. `test_type_bad[datetime]`).
-
-- No `record_uuid` — validation JSON is not the synthetic input UUID.
-
-```python
-    AssertHelper.has_key(match, "field", ...)
-    AssertHelper.has_key(match, "expected_type", ...)
-```
-
-- Same param sanity checks as `test_type_ok`.
-
-```python
-    AssertHelper.type_mismatch(initialize.dataset_steps, match)
-```
-
-- **Differs from type_ok:** passes only if `fits_type(actual, expected_type)` is **false**.
-- If the value unexpectedly fits the schema, the test fails.
-
----
-
-## What success means
-
-The intentionally bad fields on the corrupted row still look wrong vs EventsSchema. This does not send anything to the server.

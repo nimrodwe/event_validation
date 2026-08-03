@@ -59,8 +59,8 @@ def test_type_ok(initialize, match):
     AssertHelper.fits_type(initialize.synthetic_steps, match)
 ```
 
-- Calls `synthetic_steps.fits_type(actual, expected_type)`.
-- Pass if the value matches the schema type; fail with a clear message if not.
+- Calls `fits_type`: value must match that field’s EventsSchema type only (no probe matrix).
+- Pass if it fits; fail with a clear message if not.
 
 ---
 

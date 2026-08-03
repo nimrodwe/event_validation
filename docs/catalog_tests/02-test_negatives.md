@@ -1,108 +1,47 @@
 # `test_negatives`
 
 **File:** `tests/test_catalog.py`  
-**Helper:** `AssertHelper.check_negatives`  
-**Manifest filter:** `type == "negative"`  
-**Pipeline cases:**
+**Helper:** `FlowHelper.check_dataset_negative_rule`  
+**Learn from:** synthetic template  
 
-| case_id | What was broken | `target_rule_id` | `target_field` |
-|---------|-----------------|------------------|----------------|
-| `NEG-UUID` | `UUID` set to `""` | `REQ-UUID` | `UUID` |
-| `NEG-TYPE` | `Threatcode` set to `None` | `REQ-Threatcode` | `Threatcode` |
-| `NEG-SCHEMA` | Extra key `__bad` | `SCHEMA` | `__bad` |
-| `NEG-XFIELD` | `devicePlatform` ≠ `$os` | `XFIELD-OS` | `platform/$os` |
+Each rule has **its own** event-1 … event-10 list.
 
----
+- `new_keys` / `missing_keys` / `value_got_empty`: first 10 rows that hit the rule.  
+- `empty_got_null`: always 10 events — hit rows first, then pad with more validation rows; log findings or `nothing to validate`.
 
-## How this differs from the others
+## Dashboard
 
-| Topic | This test | Positives |
-|--------|-----------|-----------|
-| Round-trip equality | Yes (same) | Yes |
-| After GET | Run `validator.check_nested` on **received** data | Stop after equality |
-| Pass condition | target rule fires **and** `finding.field == target_field` | No rule check |
-| Uses `initialize.validator` | **Yes** | No |
-| Cases | Intentionally broken copies of template | Unbroken copy |
-
-Same outer shape as positives (`cases` + `truthy` + `check_*`). Different helper logic after GET.
-
----
-
-## High level
-
-Load negative cases → for each: POST → GET → payload unchanged → validate received event → assert the designed rule fired.
-
----
-
-## Test body — line by line
-
-```python
-def test_negatives(initialize, catalog_receiver):
+```
+test_negatives
+  new keys
+    event-1 … event-10
+  missing keys
+    event-1 … event-10
+  empty string got none or null
+    event-1 … event-10
+  string value got empty string
+    event-1 … event-10
 ```
 
-- Same fixtures as positives.
+| Rule folder | Pytest id | What each event lists |
+|-------------|-----------|------------------------|
+| new keys | `new_keys-e1` | Keys on validation not on synthetic (+ value found) |
+| missing keys | `missing_keys-e1` | Synthetic keys missing on validation (presence only) |
+| empty string got none or null | `empty_got_null-e1` | Present keys with `null`/`None` (10 events always) |
+| string value got empty string | `value_got_empty-e1` | Template had a value, validation is `""` |
+
+## Logs
+
+- Always: event after POST, event after GET, then findings.  
+- Hits → list **every** matching key for that rule/event.  
+- No hits → `nothing to validate` (`empty_got_null` still keeps the event case).  
+
+## Test body
 
 ```python
-    events, negatives = initialize.catalog.cases("negative")
-```
-
-- Same as positives, but filter `"negative"`.
-
-```python
-    AssertHelper.truthy(negatives, "No negative cases in manifest")
-```
-
-- Same idea as positives: list must be non-empty.
-
-```python
-    AssertHelper.check_negatives(
-        catalog_receiver, initialize.validator, negatives, events
+@pytest.mark.parametrize("negative", negative_pytest_params())
+def test_negatives(initialize, negatives_receiver, negative):
+    AssertHelper.check_dataset_negative_rule(
+        negatives_receiver, initialize.validator, negative
     )
 ```
-
-- **Differs:** passes `validator` so rules can run on received data.
-
----
-
-## Inside `check_negatives` — step by step
-
-```python
-sent_by_id = self._sent_by_id(events)
-for item in cases:
-    case_id = item["case_id"]
-```
-
-- Same loop setup as positives.
-
-```python
-    target = item["target_rule_id"]
-    target_field = item["target_field"]
-```
-
-- **Differs:** manifest says which rule and which **field** the finding must report.
-
-```python
-    sent = sent_by_id.get(case_id)
-    self.truthy(sent, "Missing event for " + case_id)
-    self._post_case(...)
-    received = self.received_equals_sent(...)
-    self._assert_expect_props(...)
-```
-
-- Same POST → GET → equality as positives, plus broken `expect` values still present.
-
-```python
-    findings = [f.to_dict() for f in validator.check_nested(received, case_id)]
-    matched = [f for f in findings if f["rule_id"] == target]
-    self.truthy(matched, ...)
-    self.truthy(target_field in [f["field"] for f in matched], ...)
-```
-
-- **Differs:** rule must fire **and** `finding.field` must be the broken field (not another one).
-
----
-
-## What success means
-
-1. Broken payload survived round-trip unchanged.  
-2. After GET, the validator reports the expected rule **on the correct field**.

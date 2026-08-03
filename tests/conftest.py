@@ -6,6 +6,7 @@ import allure
 import pytest
 
 from helpers.asserts import AssertHelper
+from helpers.flows import FlowHelper
 from src.config import OUT
 from src.local_stack import LocalStack
 from src.receiver import connect as connect_receiver
@@ -43,7 +44,11 @@ def pytest_sessionfinish(session, exitstatus):
 @pytest.hookimpl(tryfirst=True)
 def pytest_runtest_setup(item):
     """Begin a dashboard test entry and attach allure labels."""
-    RUN_STORE.begin_test(item.nodeid)
+    # Marker forces (N); otherwise begin_test auto-detects test_negatives / test_type_bad.
+    marker_negative = item.get_closest_marker("negative") is not None
+    RUN_STORE.begin_test(
+        item.nodeid, negative=True if marker_negative else None
+    )
 
     allure.dynamic.epic("Event Validation")
     path = str(item.fspath).replace("\\", "/")
@@ -170,3 +175,28 @@ def catalog_receiver(tmp_path):
     server = connect_receiver(tmp_path / "received")
     yield server
     server.disconnect()
+
+
+@pytest.fixture(scope="module")
+def negatives_receiver(tmp_path_factory):
+    """
+    One receiver for all negative rule tests so event-1 is POSTed once,
+    then reused if the same event is checked again in the module.
+    """
+    FlowHelper._NEG_RECEIVE_CACHE = {}
+    root = tmp_path_factory.mktemp("negatives-received")
+    server = connect_receiver(root / "received")
+    yield server
+    server.disconnect()
+    FlowHelper._NEG_RECEIVE_CACHE = {}
+
+
+@pytest.fixture(scope="module")
+def type_bad_receiver(tmp_path_factory):
+    """One receiver for type_bad field tests (shared POST per event)."""
+    FlowHelper._TYPE_BAD_RECEIVE_CACHE = {}
+    root = tmp_path_factory.mktemp("type-bad-received")
+    server = connect_receiver(root / "received")
+    yield server
+    server.disconnect()
+    FlowHelper._TYPE_BAD_RECEIVE_CACHE = {}

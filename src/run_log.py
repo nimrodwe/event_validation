@@ -63,6 +63,85 @@ def allure_capture(level, message):
         pass
 
 
+def parse_dashboard_group(nodeid):
+    """
+    Group test_negatives[new_keys-e1] / test_type_bad[e1] for the dashboard.
+
+    Negatives: suite → rule folder (new keys) → event-1
+    type_bad: suite → event-1 (one test per event; all bad fields in that log)
+    """
+    from helpers.dataset_negatives import RULE_TITLE_BY_ID
+
+    short = (nodeid or "").split("::")[-1]
+    suite = None
+    if short.startswith("test_negatives["):
+        suite = "test_negatives"
+        suite_label = "test_negatives"
+    elif short.startswith("test_type_bad["):
+        suite = "test_type_bad"
+        suite_label = "test_type_bad"
+    else:
+        return None
+    open_b = short.find("[")
+    close_b = short.rfind("]")
+    if open_b < 0 or close_b <= open_b:
+        return None
+    inner = short[open_b + 1 : close_b]
+
+    # Negatives: new_keys-e1 → folder "new keys", leaf event-1
+    if suite == "test_negatives":
+        for kind_id, title in RULE_TITLE_BY_ID.items():
+            prefix = kind_id + "-e"
+            if not inner.startswith(prefix):
+                continue
+            event_num = inner[len(prefix) :]
+            if not event_num.isdigit():
+                continue
+            return {
+                "group_suite": suite,
+                "group_suite_label": suite_label,
+                "group_event": kind_id,
+                "group_event_label": title,
+                "group_leaf": "event-" + event_num,
+            }
+        return None
+
+    # type_bad: e1 → folder event-1, leaf "bad types" (all findings in one test)
+    # Also accept legacy e1-datetime ids.
+    if len(inner) < 2 or inner[0] != "e":
+        return None
+    dash = inner.find("-")
+    if dash == -1:
+        event_id = inner
+        leaf = "bad types"
+    else:
+        if dash < 2:
+            return None
+        event_id = inner[:dash]
+        leaf = inner[dash + 1 :] or "bad types"
+    if not event_id[1:].isdigit():
+        return None
+    event_num = event_id[1:]
+    return {
+        "group_suite": suite,
+        "group_suite_label": suite_label,
+        "group_event": event_id,
+        "group_event_label": "event-" + event_num,
+        "group_leaf": leaf,
+    }
+
+
+def enrich_test_groups(run):
+    """Fill group_* on each test (for older run files that lack them)."""
+    for test in run.get("tests") or []:
+        if test.get("group_suite") and test.get("group_event"):
+            continue
+        group = parse_dashboard_group(test.get("nodeid"))
+        if group:
+            test.update(group)
+    return run
+
+
 def load_runs(limit=20):
     """Newest pytest runs first, for the dashboard."""
     if not TEST_RUNS.exists():
@@ -73,7 +152,7 @@ def load_runs(limit=20):
         if path.name == "latest.json":
             continue
         try:
-            runs.append(json.loads(path.read_text(encoding="utf-8")))
+            runs.append(enrich_test_groups(json.loads(path.read_text(encoding="utf-8"))))
         except (json.JSONDecodeError, OSError):
             continue
 
@@ -129,20 +208,29 @@ class TestRunStore:
         self.path = TEST_RUNS / (self.run_id + ".json")
         self.save()
 
-    def begin_test(self, nodeid):
+    def begin_test(self, nodeid, negative=None):
+        short = (nodeid or "").split("::")[-1]
+        if negative is None:
+            negative = short.startswith("test_negatives") or short.startswith(
+                "test_type_bad"
+            )
         current = {
             "nodeid": nodeid,
             "outcome": "running",
             "uuid": None,
+            "negative": bool(negative),
             "steps": [],
         }
+        group = parse_dashboard_group(nodeid)
+        if group:
+            current.update(group)
         self.tests.append(current)
         return current
 
     def set_uuid(self, nodeid, uuid):
         """Record the first sent UUID for a running test (dashboard label).
 
-        Empty string is kept when that is what was sent (e.g. NEG-UUID).
+        Empty string is kept when that is what was sent.
         Returns True if this call stored the uuid, False if already set / not found.
         """
         for test in reversed(self.tests):

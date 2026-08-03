@@ -63,6 +63,15 @@ class Receiver:
             "sha256": hashlib.sha256(body).hexdigest(),
         }
 
+        # Test hook: simulate server failure (could not accept the request).
+        force_error = (request.headers.get("X-Force-Error") or "").strip()
+        if force_error == "500":
+            receipt["decode_status"] = "server_error"
+            receipt["blocked"] = True
+            with (self.out / "receipts.jsonl").open("a", encoding="utf-8") as f:
+                f.write(json.dumps(receipt) + "\n")
+            return jsonify(receipt), HttpStatus.INTERNAL_SERVER_ERROR
+
         try:
             text = base64.b64decode(body).decode("utf-8")
             event = json.loads(text)
@@ -96,11 +105,14 @@ class Receiver:
                 f.write(json.dumps(row) + "\n")
         except Exception:
             receipt["decode_status"] = "error"
+            with (self.out / "receipts.jsonl").open("a", encoding="utf-8") as f:
+                f.write(json.dumps(receipt) + "\n")
+            return jsonify(receipt), HttpStatus.BAD_REQUEST
 
         with (self.out / "receipts.jsonl").open("a", encoding="utf-8") as f:
             f.write(json.dumps(receipt) + "\n")
 
-        return jsonify(receipt), HttpStatus.ACCEPTED
+        return jsonify(receipt), HttpStatus.OK
 
     def _stored_rows(self):
         """Load decoded rows previously saved by POST."""

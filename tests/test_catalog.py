@@ -1,6 +1,10 @@
 """One test per generated catalog case type (assignment requirement)."""
 
+import pytest
+
 from helpers.asserts import AssertHelper
+from helpers.flows import FlowHelper
+from helpers.params import boundary_pytest_params, negative_pytest_params
 
 
 def test_positives(initialize, catalog_receiver):
@@ -10,41 +14,48 @@ def test_positives(initialize, catalog_receiver):
     """
     events, positives = initialize.catalog.cases("positive")
     AssertHelper.truthy(positives, "No positive cases in manifest")
-    AssertHelper.check_positives(
+    FlowHelper.check_positives(
         catalog_receiver, initialize.validator, positives, events
     )
 
 
-def test_negatives(initialize, catalog_receiver):
+@pytest.mark.parametrize("negative", negative_pytest_params())
+def test_negatives(initialize, negatives_receiver, negative):
     """
-    Sends each negative catalog event, GETs it back, checks intentional bad
-    field values (manifest expect), then expects the target rule on that field.
+    Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+    Logs every matching key for that case, or nothing to validate.
     """
-    events, negatives = initialize.catalog.cases("negative")
-    AssertHelper.truthy(negatives, "No negative cases in manifest")
-    AssertHelper.check_negatives(
-        catalog_receiver, initialize.validator, negatives, events
+    FlowHelper.check_dataset_negative_rule(
+        negatives_receiver, initialize.validator, negative
     )
 
 
-def test_boundary(initialize, catalog_receiver):
+@pytest.mark.parametrize("boundary", boundary_pytest_params())
+def test_boundary(initialize, catalog_receiver, boundary):
     """
-    Sends boundary catalog events (edge values), confirms GET round-trip,
-    and checks boundary-specific rules such as token length.
+    One boundary case per pytest run (named by the key we changed).
+    Negative edges (time=-1, short token) get the dashboard (N) tag.
     """
-    events, boundaries = initialize.catalog.cases("boundary")
-    AssertHelper.check_boundary(
-        catalog_receiver, initialize.validator, boundaries, events
+    events, item = FlowHelper.catalog_case(
+        initialize.catalog, "boundary", boundary["case_id"]
+    )
+    FlowHelper.check_boundary_case(
+        catalog_receiver,
+        initialize.validator,
+        item,
+        events,
+        changed_key=boundary["key"],
+        changed_value=boundary["value"],
     )
 
 
 def test_retry(initialize, catalog_receiver):
     """
-    Sends the retry case pair with Idempotency-Key / X-Retry-Count headers,
-    confirms GET round-trip, and checks those headers were stored.
+    First POST fails (500, server could not accept); retry with the valid event succeeds
+    (200) and GET returns that event.
     """
     events, retries = initialize.catalog.cases("retry")
-    AssertHelper.check_retries(catalog_receiver, retries, events)
+    FlowHelper.check_retries(catalog_receiver, retries, events)
 
 
 def test_duplicates(initialize, catalog_receiver):
@@ -53,7 +64,7 @@ def test_duplicates(initialize, catalog_receiver):
     is blocked with 409 and never stored.
     """
     events, duplicates = initialize.catalog.cases("duplicate")
-    AssertHelper.check_duplicates(
+    FlowHelper.check_duplicates(
         catalog_receiver, initialize.validator, duplicates, events
     )
 
@@ -64,4 +75,4 @@ def test_replay(initialize, catalog_receiver):
     same number of events we POSTed (2→2, 1→1) with matching payloads.
     """
     events, replays = initialize.catalog.cases("replay")
-    AssertHelper.check_replays(catalog_receiver, replays, events)
+    FlowHelper.check_replays(catalog_receiver, replays, events)

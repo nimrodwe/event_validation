@@ -1,7 +1,7 @@
 import pytest
 
 from helpers.asserts import AssertHelper
-from helpers.params import TypeParams
+from helpers.params import TypeParams, type_bad_pytest_params
 
 
 @pytest.mark.parametrize("field", TypeParams.POSITIVE_FIELD_NAMES)
@@ -20,18 +20,12 @@ def test_type_ok(initialize, catalog_receiver, field):
     AssertHelper.fits_type(initialize.synthetic_steps, match)
 
 
-@pytest.mark.parametrize("field", TypeParams.NEGATIVE_FIELD_NAMES)
-def test_type_bad(initialize, catalog_receiver, field):
+@pytest.mark.parametrize("case", type_bad_pytest_params())
+def test_type_bad(initialize, type_bad_receiver, case):
     """
-    POSTs the corrupted validation row, GETs it back and checks the receiver
-    stored the same payload, then checks one field against EventsSchema
-    (must NOT fit). Does not record UUID (validation JSON keeps its own id).
+    One test per validation event (e1 … e10). POST→GET the row as-is, then
+    list every EventsSchema type mismatch once.
     """
-    row = initialize.validation_dataset
-    match = TypeParams.negative_match(field)
-    AssertHelper.has_key(match, "field", "Match is missing field name")
-    AssertHelper.has_key(match, "expected_type", "Match is missing expected_type")
-    AssertHelper.post_get_equals(
-        catalog_receiver, "TYPE-BAD-" + field, row, record_uuid=False
+    AssertHelper.check_type_bad_case(
+        type_bad_receiver, initialize.dataset_steps, case
     )
-    AssertHelper.type_mismatch(initialize.dataset_steps, match)

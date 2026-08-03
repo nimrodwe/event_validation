@@ -224,6 +224,27 @@ class Validator:
             )
         return findings
 
+    def check_time(self, event, case_id):
+        """Boundary rule: properties.time must be >= 0 when present."""
+        findings = []
+        props = event.get("properties") or {}
+        if "time" not in props:
+            return findings
+        value = props.get("time")
+        if isinstance(value, (int, float)) and not isinstance(value, bool) and value < 0:
+            findings.append(
+                self.make_finding(
+                    case_id,
+                    "RANGE-time",
+                    "time",
+                    value,
+                    ">=0",
+                    "format",
+                    "received",
+                )
+            )
+        return findings
+
     def check_dupes(self, rows):
         """Find near-duplicate rows."""
         groups = {}

@@ -2,6 +2,32 @@
 
 from datetime import date, datetime
 
+# Probe every value against these schema-style types (dashboard type matrix).
+TYPE_PROBES = (
+    "String",
+    "Nullable(Bool)",
+    "Int64",
+    "Float64",
+    "DateTime64(3)",
+    "Map(String, String)",
+)
+
+
+def type_family(type_name):
+    """Map a schema type string to a coarse family used by fits_type."""
+    text = str(type_name).lower()
+    if "bool" in text:
+        return "bool"
+    if "map(" in text:
+        return "map"
+    if "datetime" in text:
+        return "datetime"
+    if "string" in text:
+        return "string"
+    if "int" in text or "float" in text:
+        return "number"
+    return "other"
+
 
 class Step:
     def __init__(self, logger):

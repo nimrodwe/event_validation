@@ -230,7 +230,7 @@
       </div>
       <div class="card">
         <strong>Extras</strong>
-        <p>Local dashboard, Allure on CI (public per-run report), Docker for Mac/Windows parity.</p>
+        <p>Local dashboard (pytest runs + shared CI panel), Allure on GitHub Actions → public <code>allure-pages</code> (no token), Docker for Mac/Windows parity.</p>
       </div>
     </div>
     <div class="flow">
@@ -261,12 +261,12 @@
     }
   },
   {
-    "case_id": "NEG-UUID",
+    "case_id": "NEG-EMPTY",
     "event": {
       "properties": {
-        "UUID": "",
-        "Threatcode": "XTAOPJ",
-        "packageName": "com.example.synthetic"
+        "UUID": "A000…E01",
+        "Identity": "",
+        "Threatcode": "XTAOPJ"
       }
     }
   },
@@ -321,13 +321,14 @@
     "delivery_headers": {}
   },
   {
-    "case_id": "NEG-UUID",
+    "case_id": "NEG-EMPTY",
     "type": "negative",
     "intended_verdict": "invalid",
-    "target_rule_id": "REQ-UUID",
-    "target_field": "UUID",
+    "target_rule_id": "REQ-Identity",
+    "target_field": "Identity",
+    "mutation": "Set Identity=\"\" (UUID kept for test id)",
     "delivery_headers": {},
-    "expect": { "UUID": "" }
+    "expect": { "Identity": "", "UUID": "A000…E01" }
   },
   {
     "case_id": "DUP-0001",
@@ -394,20 +395,20 @@
         </tr>
         <tr>
           <td>negative</td>
-          <td>Break one thing (empty UUID, null Threatcode, bad field, OS mismatch)</td>
+          <td>Validation rows vs synthetic (4 named rules)</td>
           <td>
-            <code>NEG-UUID</code> → <code>REQ-UUID</code> on <code>UUID</code><br>
-            <code>NEG-TYPE</code> → <code>REQ-Threatcode</code> on <code>Threatcode</code><br>
-            <code>NEG-SCHEMA</code> → <code>SCHEMA</code> on <code>__bad</code><br>
-            <code>NEG-XFIELD</code> → <code>XFIELD-OS</code> on <code>platform/$os</code>
+            <code>new_keys-e1</code>, <code>missing_keys-e1</code>,
+            <code>empty_got_null-e1</code>, <code>value_got_empty-e1</code>, …<br>
+            learn from synthetic → POST/GET → list all hits for that rule
           </td>
-          <td>GET == sent + <code>expect</code> + rule on <b>correct field</b></td>
+          <td>Findings after GET (event after POST / GET logged first)</td>
         </tr>
         <tr>
           <td>boundary</td>
-          <td>Edge values (time=0, token len 29 / 30)</td>
+          <td>Edge values (time=0 / -1, token len 29 / 30)</td>
           <td>
             <code>BND-0001</code> → <code>NONE</code> (time=0 ok)<br>
+            <code>BND-TIME-NEG</code> → <code>RANGE-time</code> (time=-1)<br>
             <code>BND-TOKEN-SHORT</code> → <code>FMT</code> (token len 29)<br>
             <code>BND-TOKEN-EDGE</code> → <code>NONE</code> (token len 30)
           </td>
@@ -415,12 +416,12 @@
         </tr>
         <tr>
           <td>retry</td>
-          <td>Same body, retry headers (count 1 then 2)</td>
+          <td>Fail then succeed (server 500 → retry 200)</td>
           <td>
-            <code>RTY-0001</code> / <code>RTY-0002</code> → <code>NONE</code><br>
-            <span style="color:var(--muted)">headers: <code>Idempotency-Key</code>, <code>X-Retry-Count</code></span>
+            <code>RTY-0001</code> → attempt 1 <code>500</code>, attempt 2 <code>200</code><br>
+            <span style="color:var(--muted)">headers: <code>Idempotency-Key</code>, <code>X-Retry-Count</code> 1 then 2; force via <code>X-Force-Error</code></span>
           </td>
-          <td>Body + headers stored</td>
+          <td>Nothing stored after 500; GET equals sent after 200</td>
         </tr>
         <tr>
           <td>duplicate</td>
@@ -429,7 +430,7 @@
             <code>DUP-0001</code> / <code>DUP-0002</code> → <code>NONE</code> (manifest)<br>
             <span style="color:var(--muted)">receiver: body fingerprint → <code>409</code> on 2nd POST</span>
           </td>
-          <td>First <code>202</code>; second body fingerprint → <code>409</code> (not stored)</td>
+          <td>First <code>200</code>; second body fingerprint → <code>409</code> (not stored)</td>
         </tr>
         <tr>
           <td>replay</td>
@@ -451,151 +452,38 @@
     <details class="test" open>
       <summary>
         <span class="t-name">test_negatives</span>
-        <span class="t-brief">Each line with values (NEG-UUID example).</span>
-        <span class="t-data"><span class="pill">example</span> NEG-UUID</span>
+        <span class="t-brief">4 rules × up to 10 events — POST→GET, then findings from GET body. Each gets (N).</span>
+        <span class="t-data"><span class="pill">folders</span> new keys · missing keys · null · empty string</span>
       </summary>
       <div class="body">
         <h3>Test file</h3>
-        <pre>def test_negatives(initialize, catalog_receiver):
-    events, negatives = initialize.catalog.cases("negative")
-    AssertHelper.check_negatives(
-        catalog_receiver, initialize.validator, negatives, events
-    )</pre>
+        <pre>@pytest.mark.parametrize("negative", negative_pytest_params())
+# → test_negatives[new_keys-e1] … [value_got_empty-e10]
+def test_negatives(…, negative):
+    FlowHelper.check_dataset_negative_rule(…)</pre>
         <div class="debug">
-          <strong>1) In the test</strong>
+          <strong>Four rules (learned from synthetic vs validation row)</strong>
           <div class="dbg-row">
-            <div class="dbg-cmd">initialize</div>
-            <div class="dbg-out"><b>In:</b> fixture · <b>Holds:</b> <code>catalog</code>, <code>validator</code>, template helpers</div>
+            <div class="dbg-cmd">new keys</div>
+            <div class="dbg-out">Validation key not on synthetic → list key + value found</div>
           </div>
           <div class="dbg-row">
-            <div class="dbg-cmd">catalog_receiver</div>
-            <div class="dbg-out"><b>In:</b> fresh Flask store · <b>Out:</b> <code>url = "http://127.0.0.1:&lt;port&gt;/v1/events"</code></div>
+            <div class="dbg-cmd">missing keys</div>
+            <div class="dbg-out">Synthetic key absent on validation → presence only (no values)</div>
           </div>
           <div class="dbg-row">
-            <div class="dbg-cmd">events, negatives = …cases("negative")</div>
-            <div class="dbg-out">
-              <b>In:</b> filter <code>type == "negative"</code><br>
-              <b>Out <code>events</code>:</b> all catalog payloads <code>[{case_id, event}, …]</code> (POS, NEG, RTY, …)<br>
-              <b>Out <code>negatives</code>:</b> only manifest negatives, e.g.<br>
-              <code>[{case_id:"NEG-UUID", target_rule_id:"REQ-UUID", target_field:"UUID", expect:{"UUID":""}, …},
- {case_id:"NEG-TYPE", …}, …]</code>
-            </div>
+            <div class="dbg-cmd">empty string got none or null</div>
+            <div class="dbg-out">Mapped key present as <code>null</code>/<code>None</code> (10 events: hits first, then pad)</div>
           </div>
           <div class="dbg-row">
-            <div class="dbg-cmd">check_negatives(receiver, validator, negatives, events)</div>
-            <div class="dbg-out">
-              <b>In — four args:</b><br>
-              <code>receiver</code> = <code>catalog_receiver</code> · Flask store URL for POST/GET<br>
-              <code>validator</code> = <code>initialize.validator</code> · runs <code>check_nested</code> after GET<br>
-              <code>negatives</code> → param <code>cases</code> · 4 manifest rows (NEG-UUID, NEG-TYPE, NEG-SCHEMA, NEG-XFIELD)<br>
-              <code>events</code> → param <code>events</code> · full catalog payloads (lookup body by <code>case_id</code>)<br>
-              <b>Does:</b> for each of the 4 cases → POST → GET == sent → <code>expect</code> still bad → rule fires on <code>target_field</code><br>
-              <b>Out:</b> all 4 pass, or fail on the first broken assert (see loop below)
-            </div>
+            <div class="dbg-cmd">string value got empty string</div>
+            <div class="dbg-out">Template had a value; validation has <code>""</code></div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">Log order</div>
+            <div class="dbg-out">event after POST → event after GET → FINDINGS</div>
           </div>
         </div>
-        <h3>helpers/asserts.py — check_negatives</h3>
-        <pre>def check_negatives(self, receiver, validator, cases, events):
-    # events  → sent_by_id = {case_id: event body, …}
-    # cases   → for item in negatives (4 times)
-    # receiver → POST / GET that body
-    # validator → check_nested(received) → findings
-    sent_by_id = self._sent_by_id(events)
-    for item in cases:
-        case_id = item["case_id"]
-        target = item["target_rule_id"]       # e.g. "REQ-UUID"
-        target_field = item["target_field"]   # e.g. "UUID"
-        sent = sent_by_id.get(case_id)
-        self._post_case(receiver, case_id, sent, …)
-        received = self.received_equals_sent(receiver, case_id, sent)
-        self._assert_expect_props(case_id, received, item["expect"])
-        findings = validator.check_nested(received, case_id)
-        matched = [f for f in findings if f["rule_id"] == target]
-        assert matched
-        assert target_field in [f["field"] for f in matched]</pre>
-        <div class="debug">
-          <strong>2) Inside that code — first item NEG-UUID</strong>
-          <div class="dbg-row">
-            <div class="dbg-cmd">sent_by_id = self._sent_by_id(events)</div>
-            <div class="dbg-out">
-              <b>In:</b> full <code>events</code> list<br>
-              <b>Out:</b> <code>{"NEG-UUID": {properties:{UUID:"", …}}, "NEG-TYPE": {…}, …}</code><br>
-              <b>Impact:</b> fast lookup body by <code>case_id</code>
-            </div>
-          </div>
-          <div class="dbg-row">
-            <div class="dbg-cmd">for item in cases:</div>
-            <div class="dbg-out">
-              <b>In:</b> <code>cases</code> is <code>negatives</code><br>
-              <b>Out (this turn):</b> <code>item = {case_id:"NEG-UUID", target_rule_id:"REQ-UUID", target_field:"UUID", expect:{"UUID":""}, …}</code>
-            </div>
-          </div>
-          <div class="dbg-row">
-            <div class="dbg-cmd">case_id = item["case_id"]</div>
-            <div class="dbg-out"><b>Out:</b> <code>"NEG-UUID"</code> · used as <code>X-Case-Id</code> and GET query</div>
-          </div>
-          <div class="dbg-row">
-            <div class="dbg-cmd">target / target_field</div>
-            <div class="dbg-out"><b>Out:</b> rule <code>"REQ-UUID"</code> must report field <code>"UUID"</code></div>
-          </div>
-          <div class="dbg-row">
-            <div class="dbg-cmd">sent = sent_by_id.get(case_id)</div>
-            <div class="dbg-out">
-              <b>In:</b> <code>"NEG-UUID"</code><br>
-              <b>Out:</b> event with <code>properties.UUID == ""</code> (and normal Threatcode, …)<br>
-              <b>Impact:</b> this exact JSON is what we POST
-            </div>
-          </div>
-          <div class="dbg-row">
-            <div class="dbg-cmd">self.truthy(sent, …)</div>
-            <div class="dbg-out"><b>In:</b> <code>sent</code> dict · <b>Impact:</b> fail early if catalog missing that case · <span class="ok">pass</span></div>
-          </div>
-          <div class="dbg-row">
-            <div class="dbg-cmd">self._post_case(receiver, case_id, sent, item.get("delivery_headers"))</div>
-            <div class="dbg-out">
-              <b>In:</b> url, <code>case_id="NEG-UUID"</code>, <code>sent</code>, headers <code>{}</code><br>
-              <b>Does:</b> POST Base64(JSON(sent)) with <code>X-Case-Id: NEG-UUID</code><br>
-              <b>Out:</b> HTTP <code>202</code>; store row <code>{case_id, event: sent, …}</code>
-            </div>
-          </div>
-          <div class="dbg-row">
-            <div class="dbg-cmd">received = self.received_equals_sent(receiver, case_id, sent)</div>
-            <div class="dbg-out">
-              <b>In:</b> GET <code>?case_id=NEG-UUID</code>, compare to <code>sent</code><br>
-              <b>Does:</b> <code>assert received == sent</code> (UUID still <code>""</code>)<br>
-              <b>Out:</b> <code>received</code> = same broken event dict · <span class="ok">pass</span>
-            </div>
-          </div>
-          <div class="dbg-row">
-            <div class="dbg-cmd">self._assert_expect_props(case_id, received, item.get("expect"))</div>
-            <div class="dbg-out">
-              <b>In:</b> <code>expect = {"UUID": ""}</code>, <code>received.properties</code><br>
-              <b>Does:</b> <code>assert props.get("UUID") == ""</code><br>
-              <b>Out:</b> data still intentionally bad · <span class="ok">pass</span>
-            </div>
-          </div>
-          <div class="dbg-row">
-            <div class="dbg-cmd">findings = [f.to_dict() for f in validator.check_nested(received, case_id)]</div>
-            <div class="dbg-out">
-              <b>In:</b> <code>received</code> with empty UUID, locator <code>"NEG-UUID"</code><br>
-              <b>Does:</b> scan required / schema / cross-field rules<br>
-              <b>Out:</b> e.g. <code>[{rule_id:"REQ-UUID", field:"UUID", …}]</code>
-            </div>
-          </div>
-          <div class="dbg-row">
-            <div class="dbg-cmd">matched = [f for f in findings if f["rule_id"] == target]</div>
-            <div class="dbg-out"><b>Out:</b> <code>[{rule_id:"REQ-UUID", field:"UUID", …}]</code> · rule fired · <span class="ok">pass</span></div>
-          </div>
-          <div class="dbg-row">
-            <div class="dbg-cmd">assert target_field in [f["field"] for f in matched]</div>
-            <div class="dbg-out">
-              <b>In:</b> <code>target_field="UUID"</code>, fields <code>["UUID"]</code><br>
-              <b>Does:</b> error must be attributed to the broken field, not another one<br>
-              <b>Out:</b> <span class="ok">pass</span>
-            </div>
-          </div>
-        </div>
-        <p class="tagline" style="margin:.75rem 0 0">Loop continues for NEG-TYPE / NEG-SCHEMA / NEG-XFIELD — each checks its own <code>target_rule_id</code> + <code>target_field</code>.</p>
       </div>
     </details>
 
@@ -608,20 +496,20 @@
         <h3>Test file</h3>
         <pre>def test_positives(initialize, catalog_receiver):
     events, positives = initialize.catalog.cases("positive")
-    AssertHelper.check_positives(
+    FlowHelper.check_positives(
         catalog_receiver, initialize.validator, positives, events
     )</pre>
-        <h3>helpers/asserts.py — check_positives</h3>
+        <h3>helpers/flows.py — check_positives</h3>
         <pre>def check_positives(self, receiver, validator, cases, events):
     sent_by_id = self._sent_by_id(events)
     for item in cases:
         case_id = item["case_id"]
         sent = sent_by_id.get(case_id)
-        self.truthy(sent, "Missing event for " + case_id)
+        AssertHelper.truthy(sent, "Missing event for " + case_id)
         self._post_case(receiver, case_id, sent, item.get("delivery_headers"))
         received = self.received_equals_sent(receiver, case_id, sent)
         findings = [f.to_dict() for f in validator.check_nested(received, case_id)]
-        self.equal(findings, [], case_id + " … no nested rule findings", …)</pre>
+        AssertHelper.equal(findings, [], case_id + " … no nested rule findings", …)</pre>
         <div class="debug">
           <strong>Inside that code — POS-0001</strong>
           <div class="dbg-row">
@@ -638,7 +526,7 @@
           </div>
           <div class="dbg-row">
             <div class="dbg-cmd">self._post_case(receiver, case_id, sent, …)</div>
-            <div class="dbg-out"><b>In:</b> good <code>sent</code> · <b>Out:</b> HTTP <code>202</code>, stored</div>
+            <div class="dbg-out"><b>In:</b> good <code>sent</code> · <b>Out:</b> HTTP <code>200</code>, stored</div>
           </div>
           <div class="dbg-row">
             <div class="dbg-cmd">received = self.received_equals_sent(…)</div>
@@ -659,109 +547,94 @@
     <details class="test">
       <summary>
         <span class="t-name">test_boundary</span>
-        <span class="t-brief">Code + line debug — BND-TOKEN-SHORT.</span>
+        <span class="t-brief">Parametrize — one pytest test per BND edge (×4). Negatives get (N).</span>
       </summary>
       <div class="body">
         <h3>Test file</h3>
-        <pre>def test_boundary(initialize, catalog_receiver):
-    events, boundaries = initialize.catalog.cases("boundary")
-    AssertHelper.check_boundary(
-        catalog_receiver, initialize.validator, boundaries, events
-    )</pre>
-        <h3>helpers/asserts.py — check_boundary</h3>
-        <pre>def check_boundary(self, receiver, validator, cases, events):
-    …
-    for item in cases:
-        case_id = item["case_id"]
-        sent = sent_by_id.get(case_id)
-        self._post_case(receiver, case_id, sent, …)
-        received = self.received_equals_sent(receiver, case_id, sent)
-        props = received["properties"]
-        token = props.get("Appdome fusion app token")
-        token_findings = [f.to_dict() for f in validator.check_token_length(received, case_id)]
-        if case_id == "BND-TOKEN-SHORT":
-            self.equal(len(str(token)), validator.TOKEN_MIN_LEN - 1, …)
-            self.truthy("FMT" in [f["rule_id"] for f in token_findings], …)</pre>
+        <pre>@pytest.mark.parametrize("boundary", boundary_pytest_params())
+# → test_boundary[time=0]
+# → test_boundary[time=-1]                         (N)
+# → test_boundary[Appdome fusion app token (len=29)] (N)
+# → test_boundary[Appdome fusion app token (len=30)]
+def test_boundary(…, boundary):
+    … FlowHelper.check_boundary_case(…, changed_key=boundary["key"], changed_value=boundary["value"])</pre>
         <div class="debug">
-          <strong>Inside that code — BND-TOKEN-SHORT</strong>
+          <strong>Parametrize → named by the key / edge we changed</strong>
           <div class="dbg-row">
-            <div class="dbg-cmd">case_id / sent</div>
-            <div class="dbg-out"><code>"BND-TOKEN-SHORT"</code> · token = 29× <code>"x"</code></div>
+            <div class="dbg-cmd">test_boundary[time=0]</div>
+            <div class="dbg-out">
+              Log: <code>Changed key="time" value=0</code> · then POST/GET · <span class="ok">pass</span>
+            </div>
           </div>
           <div class="dbg-row">
-            <div class="dbg-cmd">_post_case + received_equals_sent</div>
-            <div class="dbg-out"><b>Out:</b> <code>received</code> still has token len 29</div>
+            <div class="dbg-cmd">test_boundary[time=-1] (N)</div>
+            <div class="dbg-out">
+              Log: <code>Changed key="time" value=-1</code> · expect <code>RANGE-time</code>
+            </div>
           </div>
           <div class="dbg-row">
-            <div class="dbg-cmd">token = props.get("Appdome fusion app token")</div>
-            <div class="dbg-out"><b>Out:</b> string, <code>len == 29</code></div>
+            <div class="dbg-cmd">test_boundary[Appdome fusion app token (len=29)] (N)</div>
+            <div class="dbg-out">
+              Log: <code>Changed key="Appdome fusion app token" value=… len=29</code> ·
+              expect <code>FMT</code>
+            </div>
           </div>
           <div class="dbg-row">
-            <div class="dbg-cmd">token_findings = check_token_length(…)</div>
-            <div class="dbg-out"><b>Out:</b> <code>[{rule_id:"FMT", …}]</code></div>
-          </div>
-          <div class="dbg-row">
-            <div class="dbg-cmd">self.equal(len(str(token)), 29)</div>
-            <div class="dbg-out"><b>In:</b> <code>29 == 29</code> · <span class="ok">pass</span></div>
-          </div>
-          <div class="dbg-row">
-            <div class="dbg-cmd">self.truthy("FMT" in …)</div>
-            <div class="dbg-out"><b>In:</b> <code>True</code> · <span class="ok">pass</span></div>
+            <div class="dbg-cmd">test_boundary[Appdome fusion app token (len=30)]</div>
+            <div class="dbg-out">
+              Log: <code>Changed key="…" value=… len=30</code> · no <code>FMT</code>
+            </div>
           </div>
         </div>
+        <h3>helpers/flows.py — check_boundary_case (one case)</h3>
+        <pre>def check_boundary_case(self, receiver, validator, item, events, …):
+    case_id = item["case_id"]
+    self._post_case(…)
+    received = self.received_equals_sent(…)
+    if case_id == "BND-TIME-NEG":
+        assert time == -1 and "RANGE-time" in findings
+    if case_id == "BND-TOKEN-SHORT":
+        assert len(token) == 29 and "FMT" in findings
+    …</pre>
       </div>
     </details>
 
     <details class="test">
       <summary>
         <span class="t-name">test_retry</span>
-        <span class="t-brief">Code + line debug — RTY-0001.</span>
+        <span class="t-brief">First 500 (server error); retry 200 + GET event — RTY-0001.</span>
       </summary>
       <div class="body">
         <h3>Test file</h3>
         <pre>def test_retry(initialize, catalog_receiver):
     events, retries = initialize.catalog.cases("retry")
-    AssertHelper.check_retries(catalog_receiver, retries, events)</pre>
-        <h3>helpers/asserts.py — check_retries</h3>
+    FlowHelper.check_retries(catalog_receiver, retries, events)</pre>
+        <h3>helpers/flows.py — check_retries</h3>
         <pre>def check_retries(self, receiver, cases, events):
-    self.equal(len(cases), 2, …)
-    sent_by_id = self._sent_by_id(events)
-    for item in cases:
-        case_id = item["case_id"]
-        headers = item.get("delivery_headers") or {}
-        self.has_key(headers, "Idempotency-Key", …)
-        self.has_key(headers, "X-Retry-Count", …)
-        sent = sent_by_id.get(case_id)
-        self._post_case(receiver, case_id, sent, headers)
-        self.received_equals_sent(receiver, case_id, sent)
-        stored_headers = self._get_rows(receiver, case_id)[-1].get("headers") or {}
-        self.equal(stored_headers.get("Idempotency-Key"), headers["Idempotency-Key"])
-        self.equal(stored_headers.get("X-Retry-Count"), headers["X-Retry-Count"])</pre>
+    # attempt 1: valid body + X-Force-Error:500 → 500, GET empty
+    self._post_case(…, sent, headers count=1 + force)  # status=500
+    GET ?case_id=RTY-0001 → events == []
+    # attempt 2: same event, no force → 200, GET equals sent
+    self._post_case(…, sent, headers count=2)  # status=200
+    self.received_equals_sent(…)
+    assert stored Idempotency-Key + X-Retry-Count == "2"</pre>
         <div class="debug">
           <strong>Inside that code — RTY-0001</strong>
           <div class="dbg-row">
-            <div class="dbg-cmd">headers = item.get("delivery_headers")</div>
-            <div class="dbg-out"><b>Out:</b> <code>{"Idempotency-Key":"k1","X-Retry-Count":"1"}</code></div>
+            <div class="dbg-cmd">POST valid sent (X-Retry-Count: 1, X-Force-Error: 500)</div>
+            <div class="dbg-out"><b>Out:</b> <code>status=500</code> · server could not accept · nothing stored</div>
           </div>
           <div class="dbg-row">
-            <div class="dbg-cmd">sent = sent_by_id.get("RTY-0001")</div>
-            <div class="dbg-out"><b>Out:</b> template event body</div>
+            <div class="dbg-cmd">GET ?case_id=RTY-0001</div>
+            <div class="dbg-out"><b>Out:</b> <code>events == []</code> · <span class="ok">pass</span></div>
           </div>
           <div class="dbg-row">
-            <div class="dbg-cmd">self._post_case(receiver, case_id, sent, headers)</div>
-            <div class="dbg-out"><b>In:</b> body + retry headers on HTTP request · store keeps them</div>
+            <div class="dbg-cmd">POST valid sent (X-Retry-Count: 2)</div>
+            <div class="dbg-out"><b>Out:</b> <code>status=200</code> · stored</div>
           </div>
           <div class="dbg-row">
-            <div class="dbg-cmd">self.received_equals_sent(…)</div>
-            <div class="dbg-out"><b>Does:</b> GET body == <code>sent</code></div>
-          </div>
-          <div class="dbg-row">
-            <div class="dbg-cmd">stored_headers = self._get_rows(…)[-1].get("headers")</div>
-            <div class="dbg-out"><b>Out:</b> <code>{"Idempotency-Key":"k1","X-Retry-Count":"1", …}</code></div>
-          </div>
-          <div class="dbg-row">
-            <div class="dbg-cmd">self.equal(stored…, headers[…])</div>
-            <div class="dbg-out"><b>In:</b> <code>"k1"=="k1"</code>, <code>"1"=="1"</code> · <span class="ok">pass</span></div>
+            <div class="dbg-cmd">GET + received_equals_sent</div>
+            <div class="dbg-out"><b>Does:</b> GET body == <code>sent</code> · headers count <code>"2"</code> · <span class="ok">pass</span></div>
           </div>
         </div>
       </div>
@@ -770,19 +643,19 @@
     <details class="test">
       <summary>
         <span class="t-name">test_duplicates</span>
-        <span class="t-brief">First 202; second same body → 409 blocked (not stored).</span>
+        <span class="t-brief">First 200; second same body → 409 blocked (not stored).</span>
       </summary>
       <div class="body">
         <h3>Test file</h3>
         <pre>def test_duplicates(initialize, catalog_receiver):
     events, duplicates = initialize.catalog.cases("duplicate")
-    AssertHelper.check_duplicates(
+    FlowHelper.check_duplicates(
         catalog_receiver, initialize.validator, duplicates, events
     )</pre>
-        <h3>helpers/asserts.py — check_duplicates</h3>
+        <h3>helpers/flows.py — check_duplicates</h3>
         <pre>def check_duplicates(self, receiver, validator, cases, events):
     self.equal(len(cases), 2, …)
-    # first: POST 202 + GET equals sent
+    # first: POST 200 + GET equals sent
     self._post_case(receiver, "DUP-0001", sent, …)
     self.received_equals_sent(…)
     # second: same body → 409, not in store
@@ -795,7 +668,7 @@
 if fingerprint already stored and no allow header:
     write receipt (decode_status="duplicate", blocked=true)
     return 409  # do not append events.jsonl
-# else append + 202</pre>
+# else append + 200</pre>
         <div class="debug">
           <strong>Inside that code</strong>
           <div class="dbg-row">
@@ -808,7 +681,7 @@ if fingerprint already stored and no allow header:
           <div class="dbg-row">
             <div class="dbg-cmd">POST DUP-0001</div>
             <div class="dbg-out">
-              <b>Out:</b> <code>202</code> · stored in <code>events.jsonl</code><br>
+              <b>Out:</b> <code>200</code> · stored in <code>events.jsonl</code><br>
               GET body == sent · <span class="ok">pass</span>
             </div>
           </div>
@@ -845,8 +718,8 @@ if fingerprint already stored and no allow header:
         <h3>Test file</h3>
         <pre>def test_replay(initialize, catalog_receiver):
     events, replays = initialize.catalog.cases("replay")
-    AssertHelper.check_replays(catalog_receiver, replays, events)</pre>
-        <h3>helpers/asserts.py — check_replays</h3>
+    FlowHelper.check_replays(catalog_receiver, replays, events)</pre>
+        <h3>helpers/flows.py — check_replays</h3>
         <pre>def check_replays(self, receiver, cases, events):
     self.truthy(cases, …)
     case_ids = {item.get("case_id") for item in cases}
@@ -897,52 +770,159 @@ if fingerprint already stored and no allow header:
 
     <h2>Data-type tests</h2>
 
-    <details class="test">
+    <details class="test" open>
       <summary>
         <span class="t-name">test_type_ok</span>
-        <span class="t-brief">Code + line debug — threatcode.</span>
+        <span class="t-brief">Full walkthrough — think of parametrize as a <code>for</code> loop.</span>
       </summary>
       <div class="body">
-        <h3>Test file</h3>
-        <pre>@pytest.mark.parametrize("field", TypeParams.POSITIVE_FIELD_NAMES)
+        <h3>0) What <code>@parametrize</code> means (read this first)</h3>
+        <pre># You write ONE function…
+@pytest.mark.parametrize("field", TypeParams.POSITIVE_FIELD_NAMES)
 def test_type_ok(initialize, catalog_receiver, field):
+    … body …
+
+# Pytest runs it like this:
+# for field in ["app_build_number", "app_version", …, "threatcode", …, "timezone"]:  # 37 names
+#     run test_type_ok(…, field)
+#
+# So you get 37 separate tests in the report:
+#   test_type_ok[app_build_number]
+#   test_type_ok[threatcode]
+#   …</pre>
+        <div class="debug">
+          <strong>Parametrize in plain words</strong>
+          <div class="dbg-row">
+            <div class="dbg-cmd">TypeParams.POSITIVE_FIELD_NAMES</div>
+            <div class="dbg-out">
+              A Python <b>list of 37 strings</b> — only names that exist in
+              <b>both</b> the synthetic event and EventsSchema.<br>
+              Example slice:
+              <code>["app_build_number", "app_version", …, "threatcode", …, "timezone"]</code>
+            </div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">@parametrize("field", that_list)</div>
+            <div class="dbg-out">
+              Tells pytest: call the function once per string.<br>
+              Each call gets a different <code>field</code> argument.<br>
+              The function body is identical every time — only <code>field</code> changes.
+            </div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">Why?</div>
+            <div class="dbg-out">
+              So we don’t write 37 copy-pasted tests.
+              One loop of logic × many field names.
+            </div>
+          </div>
+        </div>
+
+        <h3>1) Where the 37 names come from (before any test runs)</h3>
+        <div class="debug">
+          <div class="dbg-row">
+            <div class="dbg-cmd">Load good event</div>
+            <div class="dbg-out">
+              <code>synthetic_event_template.json</code> →
+              <code>{event, properties:{Threatcode:"XTAOPJ", UUID:"A000…0001", …}}</code>
+            </div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">Load EventsSchema</div>
+            <div class="dbg-out">
+              List of columns:
+              <code>[{name:"threatcode", type:"String"}, {name:"uuid", type:"String"}, …]</code>
+            </div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">SyntheticSteps.compare(event, schema)</div>
+            <div class="dbg-out">
+              <b>for</b> each key in <code>properties</code>:<br>
+              &nbsp;&nbsp;normalize <code>"Threatcode"</code> → <code>"threatcode"</code><br>
+              &nbsp;&nbsp;<b>if</b> name is <b>not</b> in schema → <b>skip</b> (extra keys ignored)<br>
+              &nbsp;&nbsp;<b>else</b> keep
+              <code>{field:"threatcode", actual:"XTAOPJ", expected_type:"String"}</code><br>
+              Result: list of 37 match dicts.
+            </div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">POSITIVE_FIELD_NAMES = [m["field"] for m in matches]</div>
+            <div class="dbg-out">Just the names → fed into <code>@parametrize</code>.</div>
+          </div>
+        </div>
+
+        <h3>2) One loop turn — walk every line (<code>field = "threatcode"</code>)</h3>
+        <pre>def test_type_ok(initialize, catalog_receiver, field):   # field="threatcode"
     event = initialize.synthetic_dataset
     match = TypeParams.positive_match(field)
+    AssertHelper.has_key(match, "field", …)
+    AssertHelper.has_key(match, "expected_type", …)
     AssertHelper.post_get_equals(catalog_receiver, "TYPE-OK-" + field, event)
     AssertHelper.fits_type(initialize.synthetic_steps, match)</pre>
-        <h3>helpers/asserts.py — post_get_equals + fits_type</h3>
-        <pre>def post_get_equals(self, receiver, case_id, sent, record_uuid=True):
-    self._post_case(receiver, case_id, sent, record_uuid=record_uuid)
-    return self.received_equals_sent(receiver, case_id, sent)
-
-def fits_type(self, steps, match, …):
-    field = match.get("field")
-    expected_type = match.get("expected_type")
-    actual = match.get("actual")
-    if steps.fits_type(actual, expected_type):
-        …  # pass
-    self._fail(…)</pre>
         <div class="debug">
-          <strong>Inside that code — field="threatcode"</strong>
           <div class="dbg-row">
-            <div class="dbg-cmd">field</div>
-            <div class="dbg-out"><b>In:</b> <code>"threatcode"</code></div>
+            <div class="dbg-cmd">Line: field (from pytest)</div>
+            <div class="dbg-out">
+              <b>In:</b> <code>"threatcode"</code><br>
+              Report name: <code>test_type_ok[threatcode]</code>
+            </div>
           </div>
           <div class="dbg-row">
             <div class="dbg-cmd">event = initialize.synthetic_dataset</div>
-            <div class="dbg-out">full good template</div>
+            <div class="dbg-out">
+              <b>Out:</b> <b>entire</b> good template (all properties).<br>
+              Not “only Threatcode”. Same full event for every param.
+            </div>
           </div>
           <div class="dbg-row">
             <div class="dbg-cmd">match = positive_match(field)</div>
-            <div class="dbg-out"><code>{field:"threatcode", actual:"XTAOPJ", expected_type:"String"}</code></div>
+            <div class="dbg-out">
+              Lookup in the 37 matches by name.<br>
+              <b>Out:</b>
+              <code>{field:"threatcode", actual:"XTAOPJ", expected_type:"String"}</code>
+            </div>
           </div>
           <div class="dbg-row">
-            <div class="dbg-cmd">post_get_equals(…, "TYPE-OK-threatcode", event)</div>
-            <div class="dbg-out">POST + GET + <code>received == event</code></div>
+            <div class="dbg-cmd">has_key(match, "field") / "expected_type"</div>
+            <div class="dbg-out">Guard: match dict isn’t broken · <span class="ok">pass</span></div>
           </div>
           <div class="dbg-row">
-            <div class="dbg-cmd">fits_type(…, match)</div>
-            <div class="dbg-out"><b>In:</b> <code>"XTAOPJ"</code> vs <code>"String"</code> · <span class="ok">pass</span></div>
+            <div class="dbg-cmd">post_get_equals(receiver, "TYPE-OK-threatcode", event)</div>
+            <div class="dbg-out">
+              <b>Inside:</b><br>
+              1. <code>_post_case</code> — Base64-encode <b>full</b> event,
+                 POST with <code>X-Case-Id: TYPE-OK-threatcode</code>,
+                 expect <code>200</code>, record UUID <code>A000…0001</code><br>
+              2. <code>received_equals_sent</code> — GET that case_id,
+                 assert stored body <b>==</b> what we sent (whole dict)<br>
+              <span class="ok">pass</span> = round-trip works
+            </div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">fits_type (EventsSchema only)</div>
+            <div class="dbg-out">
+              Assert value fits its EventsSchema type — no probe matrix.<br>
+              Log: <code>threatcode got='XTAOPJ' (str) expected_type=String result=PASS</code>
+            </div>
+          </div>
+        </div>
+
+        <h3>3) Next turns of the “loop”</h3>
+        <div class="debug">
+          <div class="dbg-row">
+            <div class="dbg-cmd">field = "uuid"</div>
+            <div class="dbg-out">
+              Same full-event POST/GET · case_id <code>TYPE-OK-uuid</code><br>
+              match <code>{actual:"A000…0001", expected_type:"String"}</code> ·
+              <span class="ok">pass</span>
+            </div>
+          </div>
+          <div class="dbg-row">
+            <div class="dbg-cmd">… × 37</div>
+            <div class="dbg-out">
+              Each name in <code>POSITIVE_FIELD_NAMES</code> gets its own pass/fail.
+              Keys in the event that are <b>not</b> in EventsSchema never appear here.
+            </div>
           </div>
         </div>
       </div>
@@ -951,43 +931,41 @@ def fits_type(self, steps, match, …):
     <details class="test">
       <summary>
         <span class="t-name">test_type_bad</span>
-        <span class="t-brief">Code + line debug — bad field.</span>
+        <span class="t-brief">10 events (e1…e10) — one test each; list all bad EventsSchema fields once.</span>
       </summary>
       <div class="body">
-        <h3>Test file</h3>
-        <pre>@pytest.mark.parametrize("field", TypeParams.NEGATIVE_FIELD_NAMES)
-def test_type_bad(initialize, catalog_receiver, field):
-    row = initialize.validation_dataset
-    match = TypeParams.negative_match(field)
-    AssertHelper.post_get_equals(
-        catalog_receiver, "TYPE-BAD-" + field, row, record_uuid=False
-    )
-    AssertHelper.type_mismatch(initialize.dataset_steps, match)</pre>
-        <h3>helpers/asserts.py — type_mismatch</h3>
-        <pre>def type_mismatch(self, steps, match, …):
-    field = match.get("field")
-    expected_type = match.get("expected_type")
-    actual = match.get("actual")
-    if not steps.fits_type(actual, expected_type):
-        …  # pass — value is still the wrong type
-    self._fail(…)</pre>
+        <h3>0) Parametrize — one pytest per event</h3>
+        <pre># for case in type_bad_rule_cases():   # e1 … e10
+#     run test_type_bad(…, case)</pre>
         <div class="debug">
-          <strong>Inside that code</strong>
           <div class="dbg-row">
-            <div class="dbg-cmd">row = validation_dataset</div>
-            <div class="dbg-out">corrupted row (wrong types on purpose)</div>
+            <div class="dbg-cmd">How events are chosen</div>
+            <div class="dbg-out">
+              Scan validation dataset vs EventsSchema.<br>
+              First 10 rows that already have type mismatches →
+              <code>test_type_bad[e1]</code> … <code>[e10]</code>.
+            </div>
+          </div>
+        </div>
+
+        <h3>1) One turn — <code>case = e1</code></h3>
+        <pre>def test_type_bad(initialize, type_bad_receiver, case):
+    AssertHelper.check_type_bad_case(
+        type_bad_receiver, initialize.dataset_steps, case
+    )</pre>
+        <div class="debug">
+          <div class="dbg-row">
+            <div class="dbg-cmd">POST → GET</div>
+            <div class="dbg-out">Raw validation row (no transforms). Log event after POST, then after GET.</div>
           </div>
           <div class="dbg-row">
-            <div class="dbg-cmd">match = negative_match(field)</div>
-            <div class="dbg-out"><code>{field, actual: &lt;bad&gt;, expected_type: "…"}</code></div>
-          </div>
-          <div class="dbg-row">
-            <div class="dbg-cmd">post_get_equals(…, row)</div>
-            <div class="dbg-out">store/return same bad row</div>
-          </div>
-          <div class="dbg-row">
-            <div class="dbg-cmd">type_mismatch(…, match)</div>
-            <div class="dbg-out">assert actual does <em>not</em> fit type · <span class="ok">pass</span></div>
+            <div class="dbg-cmd">Findings on GET body</div>
+            <div class="dbg-out">
+              List every bad field once, e.g.<br>
+              <code>datetime got='July 14, 2026, 16:43:11' (str) expected=datetime(2026, 7, 14, 16, 43, 11) … result=PASS</code><br>
+              <code>tda got='{"trueos…' (str) expected=dict / Map(String, String) — not a JSON string … result=PASS</code><br>
+              <code>total=3</code> — negative test: wrong type is the success case.
+            </div>
           </div>
         </div>
       </div>
@@ -1004,12 +982,20 @@ def test_type_bad(initialize, catalog_receiver, field):
         <p>Local POST/GET store (Base64 in, JSON kept).</p>
       </div>
       <div class="card">
-        <strong>src/validate.py</strong>
-        <p>Rules: required, types, format, cross-field, dupes…</p>
+        <strong>helpers/asserts.py</strong>
+        <p>Assert-only helpers (<code>equal</code>, <code>fits_type</code>, …) + test entry points.</p>
       </div>
       <div class="card">
-        <strong>helpers/asserts.py</strong>
-        <p>POST→GET helpers + clear failure text for Allure.</p>
+        <strong>helpers/flows.py</strong>
+        <p>HTTP POST/GET + catalog/dataset scenario checks.</p>
+      </div>
+      <div class="card">
+        <strong>.github/workflows/allure-github-pages.yml</strong>
+        <p>CI pytest → public Allure on <code>allure-pages</code> (dashboard CI panel, no token).</p>
+      </div>
+      <div class="card">
+        <strong>src/validate.py</strong>
+        <p>Rules: required, types, format, cross-field, dupes…</p>
       </div>
     </div>
 

@@ -1,7 +1,7 @@
 # `test_replay`
 
 **File:** `tests/test_catalog.py`  
-**Helper:** `AssertHelper.check_replays`  
+**Helper:** `FlowHelper.check_replays`  
 **Manifest filter:** `type == "replay"`  
 **Pipeline cases:**
 

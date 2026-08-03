@@ -7,10 +7,11 @@ import threading
 import time
 import webbrowser
 
-from flask import Flask, jsonify, render_template_string, request
+from flask import Flask, jsonify, render_template_string, request, send_from_directory
 from werkzeug.serving import make_server
 
-from src.config import DATASET, OUT
+from src.ci_runs import CI_RUNS
+from src.config import ALLURE_PAGES_URL, DATASET, OUT
 from src.run_log import clear_runs, load_runs
 from src.validate import Validator
 
@@ -88,7 +89,35 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     .run-head:hover { background: #334155; }
     .run-body { display: none; padding: .75rem 1rem 1rem; border-top: 1px solid #334155; }
     .run.open .run-body { display: block; }
-    .test-block { margin: .75rem 0; }
+    .suite-folder, .event-folder {
+      margin: .65rem 0; border: 1px solid #334155; border-radius: 8px;
+      background: #0f172a; overflow: hidden;
+    }
+    .suite-folder > .folder-head, .event-folder > .folder-head {
+      display: flex; align-items: center; flex-wrap: wrap; gap: .35rem 1rem;
+      padding: .55rem .85rem; cursor: pointer; user-select: none;
+      font-family: ui-monospace, monospace; font-size: .9rem; background: #1e293b;
+    }
+    .suite-folder > .folder-head:hover, .event-folder > .folder-head:hover {
+      background: #334155;
+    }
+    .suite-folder > .folder-head::before, .event-folder > .folder-head::before {
+      content: "▸ "; color: #64748b; font-size: .75rem;
+    }
+    .suite-folder.open > .folder-head::before, .event-folder.open > .folder-head::before {
+      content: "▾ "; color: #38bdf8;
+    }
+    .suite-folder > .folder-body, .event-folder > .folder-body {
+      display: none; padding: .35rem .75rem .75rem; border-top: 1px solid #334155;
+    }
+    .suite-folder.open > .folder-body, .event-folder.open > .folder-body {
+      display: block;
+    }
+    .event-folder { margin: .45rem 0; background: #020617; }
+    .event-folder > .folder-head { background: #0f172a; font-size: .85rem; }
+    .folder-label { color: #e2e8f0; font-weight: 600; }
+    .folder-meta { color: #94a3b8; font-size: .8rem; margin-left: auto; }
+    .test-block { margin: .45rem 0 .45rem .35rem; }
     .test-title {
       display: flex; align-items: center; flex-wrap: wrap; gap: .35rem 1.25rem;
       font-family: ui-monospace, monospace; font-size: .9rem; margin-bottom: .35rem;
@@ -130,6 +159,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       border-left: 3px solid #f87171; padding: .35rem .5rem; margin: 0 0 .6rem; border-radius: 4px;
     }
     .empty { color: #64748b; font-size: .9rem; }
+    .ci-meta { color: #94a3b8; font-size: .85rem; }
+    .ci-note { color: #64748b; font-size: .8rem; margin-top: .75rem; }
     button.btn {
       background: #0f172a; color: #e2e8f0; border: 1px solid #475569; border-radius: 6px;
       padding: .4rem .75rem; cursor: pointer; font-size: .85rem;
@@ -154,7 +185,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   <header>
     <div>
       <h1>Event Validation</h1>
-      <div class="sub">Local pytest runs</div>
+      <div class="sub">Pytest runs and CI</div>
     </div>
     <div class="status">
       <div class="actions">
@@ -173,11 +204,33 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       </div>
       <div id="runs" class="empty">Loading…</div>
     </section>
+    <section class="panel panel-pad">
+      <div class="section-head">
+        <div>
+          <h2>Pytest CI runs (shared)</h2>
+          <div class="sub" id="ci-sub">Same public catalog on every machine — look here for workflow #38 etc.</div>
+        </div>
+        <div class="actions">
+          <button class="btn" id="btn-refresh-ci" type="button">Refresh CI list</button>
+          <a id="btn-allure-pages" class="btn btn-primary" href="{{ allure_pages_url }}" target="_blank" rel="noopener">Open Allure report</a>
+        </div>
+      </div>
+      <div id="ci-error" class="msg" style="color:#fca5a5"></div>
+      <div id="ci-runs" class="empty">Loading…</div>
+    </section>
   </main>
   <script>
     let testRuns = {{ test_runs_json | safe }};
+    let ciPayload = {{ ci_runs_json | safe }};
+    const ALLURE_PAGES_URL = {{ allure_pages_url | tojson }};
     const openRuns = new Set();
     const openTests = new Set();
+    const openFolders = new Set();
+    const openCiRuns = new Set();
+
+    function allurePagesUrl() {
+      return (ciPayload && ciPayload.allure_pages_url) || ALLURE_PAGES_URL || '';
+    }
 
     function esc(s) {
       return String(s)
@@ -212,6 +265,87 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       return name.startsWith('test_negatives') || name.startsWith('test_type_bad');
     }
 
+    /** Group test_negatives[new_keys-e1] / test_type_bad[e1] into folders. */
+    function eventGroupInfo(test) {
+      const negTitles = {
+        new_keys: 'new keys',
+        missing_keys: 'missing keys',
+        empty_got_null: 'empty string got none or null',
+        value_got_empty: 'string value got empty string',
+      };
+      const negOrder = ['new_keys', 'missing_keys', 'empty_got_null', 'value_got_empty'];
+      if (test && test.group_suite && test.group_event) {
+        return {
+          suite: test.group_suite,
+          suiteLabel: test.group_suite_label || test.group_suite,
+          eventId: test.group_event,
+          eventLabel: test.group_event_label || test.group_event,
+          shortName: test.group_leaf || testName(test.nodeid),
+          negOrder: negOrder.indexOf(test.group_event),
+        };
+      }
+      const name = testName(test && test.nodeid);
+      let suite = null;
+      let suiteLabel = null;
+      if (name.indexOf('test_negatives[') === 0) {
+        suite = 'test_negatives';
+        suiteLabel = 'test_negatives';
+      } else if (name.indexOf('test_type_bad[') === 0) {
+        suite = 'test_type_bad';
+        suiteLabel = 'test_type_bad';
+      } else {
+        return null;
+      }
+      const openB = name.indexOf('[');
+      const closeB = name.lastIndexOf(']');
+      if (openB < 0 || closeB <= openB) return null;
+      const inner = name.slice(openB + 1, closeB);
+
+      // Negatives: new_keys-e1 → folder "new keys", leaf event-1
+      if (suite === 'test_negatives') {
+        for (let i = 0; i < negOrder.length; i++) {
+          const kindId = negOrder[i];
+          const prefix = kindId + '-e';
+          if (inner.indexOf(prefix) !== 0) continue;
+          const eventNum = inner.slice(prefix.length);
+          if (!/^\\d+$/.test(eventNum)) continue;
+          return {
+            suite: suite,
+            suiteLabel: suiteLabel,
+            eventId: kindId,
+            eventLabel: negTitles[kindId] || kindId,
+            shortName: 'event-' + eventNum,
+            negOrder: i,
+          };
+        }
+        return null;
+      }
+
+      // type_bad: e1 (or legacy e1-datetime)
+      if (inner.length < 2 || inner.charAt(0) !== 'e') return null;
+      const dash = inner.indexOf('-');
+      let eventId;
+      let shortName;
+      if (dash === -1) {
+        eventId = inner;
+        shortName = 'bad types';
+      } else {
+        if (dash < 2) return null;
+        eventId = inner.slice(0, dash);
+        shortName = inner.slice(dash + 1) || 'bad types';
+      }
+      const eventNum = eventId.slice(1);
+      if (!/^\\d+$/.test(eventNum)) return null;
+      return {
+        suite: suite,
+        suiteLabel: suiteLabel,
+        eventId: eventId,
+        eventLabel: 'event-' + eventNum,
+        shortName: shortName,
+        negOrder: -1,
+      };
+    }
+
     function testUuid(test) {
       // First UUID that was sent for this test (empty string → "(empty)").
       if (test && test.uuid != null) {
@@ -244,6 +378,175 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
     function runKey(run) { return run.run_id || run.started || ''; }
 
+    function folderStats(tests) {
+      const passed = tests.filter(t => t.outcome === 'passed').length;
+      const failed = tests.filter(t => t.outcome === 'failed').length;
+      return { passed, failed, total: tests.length };
+    }
+
+    function makeFolder(kind, folderKey, label, tests, renderChildren, metaExtra) {
+      const stats = folderStats(tests);
+      const el = document.createElement('div');
+      // Keep folders collapsed unless the user opened them (or a child failed).
+      const autoOpen = stats.failed > 0;
+      el.className = kind + (openFolders.has(folderKey) || autoOpen ? ' open' : '');
+      if (autoOpen) openFolders.add(folderKey);
+      const head = document.createElement('div');
+      head.className = 'folder-head';
+      head.innerHTML =
+        `<span class="folder-label">${esc(label)}</span>` +
+        (stats.failed ? outcomeBadge('failed') : outcomeBadge('passed')) +
+        `<span class="folder-meta">${esc(metaExtra || '')}` +
+        (metaExtra ? ' · ' : '') +
+        `${stats.total} tests · ${stats.passed} passed` +
+        (stats.failed ? ` · ${stats.failed} failed` : '') + `</span>`;
+      head.onclick = (ev) => {
+        ev.stopPropagation();
+        if (openFolders.has(folderKey)) openFolders.delete(folderKey); else openFolders.add(folderKey);
+        el.classList.toggle('open');
+      };
+      const body = document.createElement('div');
+      body.className = 'folder-body';
+      renderChildren(body);
+      el.appendChild(head);
+      el.appendChild(body);
+      return el;
+    }
+
+    function makeTestBlock(runKeyStr, t, displayName) {
+      const testKey = runKeyStr + '::' + (t.nodeid || '');
+      const block = document.createElement('div');
+      block.className = 'test-block' + (openTests.has(testKey) ? ' open' : '');
+      const uuid = testUuid(t) || '—';
+      const uuidHtml = `<span class="test-uuid">${esc(uuid)}</span>`;
+      const stepList = t.steps || [];
+      const errSteps = stepList.filter(s => s.level === 'ERROR');
+      const dataSteps = stepList.filter(s => s.level !== 'ERROR');
+      const errStep = errSteps[0];
+      let errPreview = '';
+      if (t.outcome === 'failed' && errStep && errStep.message) {
+        const raw = String(errStep.message).trim();
+        const nl = raw.indexOf('\\n');
+        const head = nl === -1 ? raw : raw.slice(0, nl).trim();
+        const bodyTxt = nl === -1 ? '' : raw.slice(nl + 1).trim();
+        errPreview =
+          `<div class="fail-summary">` +
+          `<div class="fail-title">${esc(head)}</div>` +
+          (bodyTxt ? `<div>${esc(bodyTxt)}</div>` : '') +
+          `</div>`;
+      }
+      const lines = (t.outcome === 'failed' ? dataSteps : stepList).map(s =>
+        `<div class="step-line ${esc(s.level)}"><span class="${esc(s.level)}">[${esc(s.level)}]</span> ${formatStepMessage(s.message)}</div>`
+      ).join('') || (t.outcome === 'failed' ? '' : '<div class="empty">No step logs</div>');
+      if (t.outcome === 'failed') {
+        block.classList.add('failed');
+        block.classList.add('open');
+        openTests.add(testKey);
+      }
+      const title = document.createElement('div');
+      title.className = 'test-title';
+      const negHtml = isNegativeTest(t) ? '<span class="test-neg">(N)</span>' : '';
+      const label = displayName != null ? displayName : testName(t.nodeid);
+      title.innerHTML =
+        `${outcomeBadge(t.outcome)} <span class="test-name">${esc(label)}</span>` +
+        `<span class="test-right">${negHtml}${uuidHtml}</span>`;
+      title.onclick = () => {
+        if (openTests.has(testKey)) openTests.delete(testKey); else openTests.add(testKey);
+        block.classList.toggle('open');
+      };
+      const steps = document.createElement('div');
+      steps.className = 'steps';
+      steps.innerHTML = lines;
+      block.appendChild(title);
+      if (errPreview) {
+        const preview = document.createElement('div');
+        preview.innerHTML = errPreview;
+        block.appendChild(preview.firstChild);
+      }
+      if (lines) block.appendChild(steps);
+      return block;
+    }
+
+    function appendGroupedTests(container, runKeyStr, tests) {
+      const plain = [];
+      const suites = {};
+      (tests || []).forEach(t => {
+        const g = eventGroupInfo(t);
+        if (!g) {
+          plain.push(t);
+          return;
+        }
+        if (!suites[g.suite]) suites[g.suite] = { label: g.suiteLabel, events: {} };
+        if (!suites[g.suite].events[g.eventId]) {
+          suites[g.suite].events[g.eventId] = {
+            label: g.eventLabel,
+            tests: [],
+            negOrder: g.negOrder,
+          };
+        }
+        suites[g.suite].events[g.eventId].tests.push({ test: t, shortName: g.shortName });
+      });
+
+      plain.forEach(t => container.appendChild(makeTestBlock(runKeyStr, t)));
+
+      Object.keys(suites).sort().forEach(suiteKey => {
+        const suite = suites[suiteKey];
+        const allSuiteTests = [];
+        const eventIds = Object.keys(suite.events).sort((a, b) => {
+          const oa = suite.events[a].negOrder;
+          const ob = suite.events[b].negOrder;
+          if (oa != null && oa >= 0 && ob != null && ob >= 0) return oa - ob;
+          const na = parseInt(String(a).replace(/\\D/g, ''), 10) || 0;
+          const nb = parseInt(String(b).replace(/\\D/g, ''), 10) || 0;
+          return na - nb;
+        });
+        eventIds.forEach(eid => {
+          suite.events[eid].tests.forEach(x => allSuiteTests.push(x.test));
+        });
+        const suiteFolderKey = runKeyStr + '::folder::' + suiteKey;
+        container.appendChild(makeFolder(
+          'suite-folder',
+          suiteFolderKey,
+          suite.label,
+          allSuiteTests,
+          (suiteBody) => {
+            eventIds.forEach(eventId => {
+              const ev = suite.events[eventId];
+              const eventTests = ev.tests.map(x => x.test);
+              const eventFolderKey = suiteFolderKey + '::' + eventId;
+              const sharedUuid = (() => {
+              const seen = [];
+              eventTests.forEach(t => {
+                const u = testUuid(t);
+                if (u && seen.indexOf(u) === -1) seen.push(u);
+              });
+              return seen.length === 1 ? seen[0] : '';
+            })();
+            // Under a rule folder, leaves are event-1..n — sort by event number.
+            ev.tests.sort((a, b) => {
+              const na = parseInt(String(a.shortName).replace(/\\D/g, ''), 10) || 0;
+              const nb = parseInt(String(b.shortName).replace(/\\D/g, ''), 10) || 0;
+              return na - nb;
+            });
+            suiteBody.appendChild(makeFolder(
+                'event-folder',
+                eventFolderKey,
+                ev.label,
+                eventTests,
+                (eventBody) => {
+                  ev.tests.forEach(x => {
+                    eventBody.appendChild(makeTestBlock(runKeyStr, x.test, x.shortName));
+                  });
+                },
+                sharedUuid ? ('UUID ' + sharedUuid) : null
+              ));
+            });
+          },
+          eventIds.length + ' events'
+        ));
+      });
+    }
+
     function renderRuns() {
       const root = document.getElementById('runs');
       if (!testRuns.length) {
@@ -272,67 +575,141 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         };
         const body = document.createElement('div');
         body.className = 'run-body';
-        (run.tests || []).forEach(t => {
-          const testKey = key + '::' + (t.nodeid || '');
-          const block = document.createElement('div');
-          block.className = 'test-block' + (openTests.has(testKey) ? ' open' : '');
-          const uuid = testUuid(t);
-          const uuidHtml = uuid ? `<span class="test-uuid">${esc(uuid)}</span>` : '';
-          const stepList = t.steps || [];
-          const errSteps = stepList.filter(s => s.level === 'ERROR');
-          const dataSteps = stepList.filter(s => s.level !== 'ERROR');
-          const errStep = errSteps[0];
-          // Failed: API error + key/before/after ABOVE data. Data steps never include ERROR.
-          let errPreview = '';
-          if (t.outcome === 'failed' && errStep && errStep.message) {
-            const raw = String(errStep.message).trim();
-            const nl = raw.indexOf('\\n');
-            const head = nl === -1 ? raw : raw.slice(0, nl).trim();
-            const body = nl === -1 ? '' : raw.slice(nl + 1).trim();
-            errPreview =
-              `<div class="fail-summary">` +
-              `<div class="fail-title">${esc(head)}</div>` +
-              (body ? `<div>${esc(body)}</div>` : '') +
-              `</div>`;
-          }
-          const lines = (t.outcome === 'failed' ? dataSteps : stepList).map(s =>
-            `<div class="step-line ${esc(s.level)}"><span class="${esc(s.level)}">[${esc(s.level)}]</span> ${formatStepMessage(s.message)}</div>`
-          ).join('') || (t.outcome === 'failed' ? '' : '<div class="empty">No step logs</div>');
-          if (t.outcome === 'failed') {
-            block.classList.add('failed');
-            block.classList.add('open');
-            openTests.add(testKey);
-          }
-          const title = document.createElement('div');
-          title.className = 'test-title';
-          const negHtml = isNegativeTest(t) ? '<span class="test-neg">(N)</span>' : '';
-          title.innerHTML =
-            `${outcomeBadge(t.outcome)} <span class="test-name">${esc(testName(t.nodeid))}</span>` +
-            `<span class="test-right">${negHtml}${uuidHtml}</span>`;
-          title.onclick = () => {
-            if (openTests.has(testKey)) openTests.delete(testKey); else openTests.add(testKey);
-            block.classList.toggle('open');
-          };
-          const steps = document.createElement('div');
-          steps.className = 'steps';
-          steps.innerHTML = lines;
-          block.appendChild(title);
-          if (errPreview) {
-            const preview = document.createElement('div');
-            preview.innerHTML = errPreview;
-            block.appendChild(preview.firstChild);
-          }
-          if (lines) block.appendChild(steps);
-          body.appendChild(block);
-        });
+        appendGroupedTests(body, key, run.tests || []);
         box.appendChild(head);
         box.appendChild(body);
         root.appendChild(box);
       });
     }
 
+    function ciBadge(run) {
+      if (run.conclusion) {
+        const c = run.conclusion;
+        const cls = (c === 'success' || c === 'failure' || c === 'cancelled') ? c : 'skipped';
+        return `<span class="badge ${cls}">${esc(c)}</span>`;
+      }
+      const st = run.status || 'queued';
+      return `<span class="badge in_progress">${esc(st)}</span>`;
+    }
+
+    function ciHasInProgress(payload) {
+      return ((payload && payload.runs) || []).some(
+        r => !r.conclusion || (r.status && r.status !== 'completed')
+      );
+    }
+
+    function renderCiRuns() {
+      const root = document.getElementById('ci-runs');
+      const errEl = document.getElementById('ci-error');
+      const subEl = document.getElementById('ci-sub');
+      const allureBtn = document.getElementById('btn-allure-pages');
+      const pagesUrl = allurePagesUrl();
+      const runs = (ciPayload && ciPayload.runs) || [];
+      const updated = (ciPayload && ciPayload.updated_at) || '';
+      errEl.textContent = (ciPayload && ciPayload.error) ? ciPayload.error : '';
+      if (subEl) {
+        subEl.textContent = updated
+          ? ('Shared catalog · ' + runs.length + ' runs · updated ' + niceDate(updated) + ' — same on Windows and Mac')
+          : 'Same public catalog on every machine — look here for workflow numbers like #38';
+      }
+      if (allureBtn && pagesUrl) {
+        allureBtn.href = pagesUrl;
+        allureBtn.style.display = '';
+      } else if (allureBtn) {
+        allureBtn.style.display = 'none';
+      }
+
+      if (ciPayload && ciPayload.error && !runs.length) {
+        root.className = 'empty';
+        root.textContent = (ciPayload && ciPayload.error)
+          ? String(ciPayload.error)
+          : 'No CI runs loaded yet.';
+        return;
+      }
+      if (!runs.length) {
+        root.className = 'empty';
+        root.textContent = 'No CI runs yet. Push or run the workflow from Actions. Open Allure report still works once Pages has a deploy.';
+        return;
+      }
+      root.className = '';
+      root.innerHTML = '';
+      if (ciPayload.actions_url) {
+        const src = document.createElement('div');
+        src.className = 'ci-meta';
+        src.style.marginBottom = '0.75rem';
+        src.innerHTML = `Workflow: <a class="btn-link" style="margin:0" href="${esc(ciPayload.actions_url)}" target="_blank" rel="noopener">Open workflow on GitHub</a>`;
+        root.appendChild(src);
+      }
+      runs.forEach((run) => {
+        const key = String(run.run_number || run.html_url || '');
+        const box = document.createElement('div');
+        box.className = 'run' + (openCiRuns.has(key) ? ' open' : '');
+        const head = document.createElement('div');
+        head.className = 'run-head';
+        const result = run.conclusion || run.status || 'unknown';
+        const actionsLink = run.html_url
+          ? `<a class="btn-link" style="margin:0 0 0 auto" href="${esc(run.html_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Actions run</a>`
+          : `<span class="test-uuid">${esc(result)}</span>`;
+        head.innerHTML = `
+          <strong>#${esc(String(run.run_number || '?'))}</strong>
+          ${ciBadge(run)}
+          <span class="badge">${esc(run.event || '')}</span>
+          <span class="badge">${esc(run.head_branch || '')}</span>
+          <span class="ci-meta">${niceDate(run.created_at)}</span>
+          ${actionsLink}`;
+        head.onclick = () => {
+          if (openCiRuns.has(key)) openCiRuns.delete(key); else openCiRuns.add(key);
+          box.classList.toggle('open');
+        };
+        const body = document.createElement('div');
+        body.className = 'run-body';
+        // Per-run public Pages URL: /runs/<run_id>/ (no GitHub token).
+        const runAllure = run.allure_url || '';
+        let links = '';
+        if (run.html_url) {
+          links += `<a class="btn-link" href="${esc(run.html_url)}" target="_blank" rel="noopener">This run on Actions</a>`;
+        }
+        if (runAllure) {
+          links += `<a class="btn btn-primary" href="${esc(runAllure)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Open Allure report</a>`;
+        }
+        const failHint = (run.conclusion === 'failure')
+          ? `<div class="sub" style="color:#fca5a5;margin:.35rem 0">Failed CI run — Actions for logs; Open Allure is this run's published report.</div>`
+          : '';
+        body.innerHTML = `
+          <div class="ci-meta">${esc(run.display_title || '')}</div>
+          <div class="ci-meta">SHA ${esc(run.head_sha || '—')} · ${esc(result)}</div>
+          ${failHint}
+          <div class="actions" style="margin-top:.5rem">${links}</div>
+          <pre style="margin-top:.75rem;white-space:pre-wrap;word-break:break-word;font-size:.8rem;color:#cbd5e1;background:#020617;border:1px solid #334155;border-radius:6px;padding:.75rem">${esc(JSON.stringify(run, null, 2))}</pre>
+          <p class="ci-note">Open Allure report opens this run from the allure-pages branch (raw.githack) — same on every machine, no login.</p>`;
+        box.appendChild(head);
+        box.appendChild(body);
+        root.appendChild(box);
+      });
+    }
+
+    let ciTimer = null;
+    function scheduleCiRefresh() {
+      if (ciTimer) clearInterval(ciTimer);
+      // Poll public catalog (no GitHub API rate limits).
+      ciTimer = setInterval(() => refreshCi(true), 10000);
+    }
+
+    async function refreshCi(force) {
+      try {
+        const url = force ? '/api/ci-runs?refresh=1' : '/api/ci-runs';
+        ciPayload = await fetch(url).then(r => r.json());
+        renderCiRuns();
+      } catch (err) {
+        ciPayload = { runs: [], error: 'Could not reach local /api/ci-runs', allure_pages_url: '' };
+        renderCiRuns();
+      }
+      scheduleCiRefresh();
+    }
+
     function renderAll() {
       renderRuns();
+      renderCiRuns();
     }
 
     async function loadRuns() {
@@ -345,6 +722,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       testRuns = [];
       renderRuns();
     });
+    document.getElementById('btn-refresh-ci').addEventListener('click', () => refreshCi(true));
     document.getElementById('btn-shutdown').addEventListener('click', async () => {
       await fetch('/api/shutdown', { method: 'POST' });
       document.body.innerHTML = '<main class="panel-pad"><h1>Server shut down</h1><p class="sub">You can close this tab.</p></main>';
@@ -360,6 +738,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       try { navigator.sendBeacon('/api/presence/leave'); } catch (e) {}
     });
     renderAll();
+    refreshCi(false);
     setInterval(async () => {
       try {
         await loadRuns();
@@ -421,6 +800,23 @@ class Report:
         self.app.add_url_rule("/api/validate", "validate", self.api_validate, methods=["POST"])
         self.app.add_url_rule("/api/test-runs", "test_runs", self.api_test_runs)
         self.app.add_url_rule("/api/test-runs/clear", "clear_runs", self.api_clear_test_runs, methods=["POST"])
+        self.app.add_url_rule("/api/ci-runs", "ci_runs", self.api_ci_runs)
+        self.app.add_url_rule(
+            "/api/ci-runs/<run_id>/allure",
+            "ci_allure_prepare",
+            self.api_ci_allure_prepare,
+            methods=["POST"],
+        )
+        self.app.add_url_rule(
+            "/ci-allure/<run_id>/",
+            "ci_allure_index",
+            self.ci_allure_index,
+        )
+        self.app.add_url_rule(
+            "/ci-allure/<run_id>/<path:filename>",
+            "ci_allure_file",
+            self.ci_allure_file,
+        )
         self.app.add_url_rule("/api/presence", "presence_ping", self.api_presence_ping, methods=["POST"])
         self.app.add_url_rule("/api/presence", "presence_status", self.api_presence_status, methods=["GET"])
         self.app.add_url_rule(
@@ -433,7 +829,19 @@ class Report:
         self.app.add_url_rule("/api/health", "health", self.api_health)
 
     def api_health(self):
-        return jsonify({"ok": True, "features": ["presence_leave"]})
+        return jsonify({
+            "ok": True,
+            "ci_source": "allure-pages/ci-runs.json",
+            "uses_github_api": False,
+            "features": [
+                "presence_leave",
+                "event_folders",
+                "suite_test_names",
+                "uuid_corner",
+                "negatives_named_buckets",
+                "ci_runs_panel",
+            ],
+        })
 
     def write(self, findings):
         """Write machine-readable findings + a static HTML drill-down report."""
@@ -503,6 +911,8 @@ class Report:
         return render_template_string(
             DASHBOARD_HTML,
             test_runs_json=json.dumps(load_runs()),
+            ci_runs_json=json.dumps(CI_RUNS.load()),
+            allure_pages_url=ALLURE_PAGES_URL,
         )
 
     def api_received(self):
@@ -529,6 +939,28 @@ class Report:
         clear_runs()
         return jsonify({"ok": True})
 
+
+    def api_ci_runs(self):
+        force = request.args.get("refresh") in ("1", "true", "yes")
+        return jsonify(CI_RUNS.load(force=force))
+
+    def api_ci_allure_prepare(self, run_id):
+        """Return the public Allure Pages URL (no GitHub token required)."""
+        result = CI_RUNS.prepare_allure_report(run_id)
+        status = 200 if result.get("ok") else 400
+        return jsonify(result), status
+
+    def ci_allure_index(self, run_id):
+        folder = CI_RUNS.find_allure_index_dir(run_id)
+        if folder is None:
+            return jsonify({"ok": False, "error": "Allure report not loaded yet."}), 404
+        return send_from_directory(folder, "index.html")
+
+    def ci_allure_file(self, run_id, filename):
+        folder = CI_RUNS.find_allure_index_dir(run_id)
+        if folder is None:
+            return jsonify({"ok": False, "error": "Allure report not loaded yet."}), 404
+        return send_from_directory(folder, filename)
 
     def api_presence_ping(self):
         self._last_presence = time.time()

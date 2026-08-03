@@ -1,7 +1,7 @@
 # `test_positives`
 
 **File:** `tests/test_catalog.py`  
-**Helper:** `AssertHelper.check_positives` in `helpers/asserts.py`  
+**Helper:** `FlowHelper.check_positives` in `helpers/flows.py`  
 **Manifest filter:** `type == "positive"`  
 **Pipeline cases:** `POS-0001` (unchanged copy of the synthetic template)
 
@@ -93,7 +93,7 @@ for item in cases:   # each positive manifest row
 ```
 
 - Base64-POST to receiver with `X-Case-Id` (+ empty headers for POS).
-- Assert HTTP 202.
+- Assert HTTP 200.
 
 ```python
     self.received_equals_sent(receiver, case_id, sent)

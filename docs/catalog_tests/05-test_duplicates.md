@@ -1,7 +1,7 @@
 # `test_duplicates`
 
 **File:** `tests/test_catalog.py`  
-**Helper:** `AssertHelper.check_duplicates`  
+**Helper:** `FlowHelper.check_duplicates`  
 **Manifest filter:** `type == "duplicate"`  
 **Pipeline cases:**
 
@@ -17,7 +17,7 @@
 | Topic | This test | Positives / Negatives |
 |--------|-----------|------------------------|
 | Count | Exactly **2** | Any non-empty (or fixed BND set) |
-| Second POST | **409 Conflict** (not stored) | Expected **202** |
+| Second POST | **409 Conflict** (not stored) | Expected **200** |
 | Enforcement | Receiver body fingerprint (`UUID` skipped) | Negatives: `check_nested` + `target_rule_id` |
 | Needs both rows together | **No** — second never lands | No |
 | Outer `truthy` in test? | **No** | Yes for pos/neg |
@@ -28,7 +28,7 @@ Retry / replay may still store the same body when `Idempotency-Key` or `X-Replay
 
 ## High level
 
-Load the duplicate pair → POST first (202 + GET equals sent) → POST second (409, `blocked`) → GET second case_id returns no rows.
+Load the duplicate pair → POST first (200 + GET equals sent) → POST second (409, `blocked`) → GET second case_id returns no rows.
 
 ---
 
