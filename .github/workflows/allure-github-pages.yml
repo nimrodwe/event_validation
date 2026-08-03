@@ -11,8 +11,6 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
   actions: read
 
 # Do not cancel in-progress publishes — every run must keep its /runs/<id>/ report.
@@ -267,28 +265,6 @@ jobs:
           git push --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git" allure-pages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Best-effort github.io deploy (may be blocked for non-default branches).
-      # Dashboard Open Allure links use raw.githack over allure-pages, not github.io.
-      - name: Upload GitHub Pages artifact
-        continue-on-error: true
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: out/pages-site
-
-  deploy-pages:
-    name: Deploy to GitHub Pages
-    needs: publish-allure
-    if: always() && needs.publish-allure.result == 'success' && github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v5
 
   # Fail the workflow if pytest failed (after Allure was published).
   pytest-status:
