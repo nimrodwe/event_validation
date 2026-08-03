@@ -37,8 +37,8 @@ class FlowHelper:
     def record_uuid(self, value):
         AssertHelper.record_uuid = value
 
-    def _info(self, message):
-        AssertHelper._info(message)
+    def _info(self, message, allure=True):
+        AssertHelper._info(message, allure=allure)
 
     def _fail(self, title, details, data=None):
         AssertHelper._fail(title, details, data=data)
@@ -68,12 +68,13 @@ class FlowHelper:
         return AssertHelper._plain(value)
 
     def _log_before_after(self, key, before, after):
+        # One line so Allure shows a single step (no "details" attachment).
         self._info(
             "key: "
             + str(key)
-            + "\nbefore: "
+            + " before: "
             + self._plain(before)
-            + "\nafter: "
+            + " after: "
             + self._plain(after)
         )
 
@@ -104,9 +105,13 @@ class FlowHelper:
         delivery_headers=None,
         record_uuid=True,
         expected_status=None,
-        log_body=True,
+        log_body=False,
     ):
-        """POST one event to the receiver API."""
+        """POST one event to the receiver API.
+
+        log_body=False by default (Allure stays lean). Callers that need the
+        full payload on the local dashboard pass log_body=True or log it themselves.
+        """
         if expected_status is None:
             expected_status = HttpStatus.OK
         headers = {"X-Case-Id": case_id}
@@ -115,19 +120,7 @@ class FlowHelper:
             self._record_uuid(sent)
         self._info("POST " + receiver.url + " case_id=" + str(case_id))
         if delivery_headers:
-            self._info(json.dumps({"delivery_headers": delivery_headers}))
-        # Full event in Allure test-body attachments (does not modify source data files).
-        self._attach_allure_json(
-            "Request event (" + str(case_id) + ")",
-            {
-                "method": "POST",
-                "url": receiver.url,
-                "headers": headers,
-                "case_id": case_id,
-                "body_encoding": "base64(application/json)",
-                "event": sent,
-            },
-        )
+            self._info("delivery_headers=" + json.dumps(delivery_headers, default=str))
         if log_body:
             self._info(json.dumps(sent))
         body = base64.b64encode(json.dumps(sent).encode("utf-8"))
@@ -161,7 +154,7 @@ class FlowHelper:
             + " (invalid body)"
         )
         if delivery_headers:
-            self._info(json.dumps({"delivery_headers": delivery_headers}))
+            self._info("delivery_headers=" + json.dumps(delivery_headers, default=str))
         self._info("body=not-valid-base64")
         response = self.http.post(
             receiver.url, data=b"not-valid-base64!!!", headers=headers
@@ -197,12 +190,14 @@ class FlowHelper:
         return rows
 
     def received_equals_sent(
-        self, receiver, case_id, sent, return_row=False, log_body=True
+        self, receiver, case_id, sent, return_row=False, log_body=False
     ):
-        """GET /v1/events?case_id=... and assert that payload equals what we POSTed."""
+        """GET /v1/events?case_id=... and assert that payload equals what we POSTed.
+
+        log_body=False by default — full GET body is for the dashboard when needed.
+        """
         row = self._get_rows(receiver, case_id)[-1]
         received = row.get("event")
-        self._attach_allure_json("Received event (" + str(case_id) + ")", received)
         if log_body:
             self._info(json.dumps(received))
         uuid = self.event_uuid(sent) or self.event_uuid(received) or "<missing UUID>"
@@ -344,11 +339,15 @@ class FlowHelper:
         else:
             self._info(label + ": using stored GET body from this run")
 
-        # Comparison dumps first, then findings from the GET body only.
-        self._info(label + ": event after POST:")
-        self._info(json.dumps(sent, default=str, ensure_ascii=False))
-        self._info(label + ": event after GET:")
-        self._info(json.dumps(received, default=str, ensure_ascii=False))
+        # Full events on the dashboard only; Allure gets findings lines below.
+        self._info(label + ": event after POST:", allure=False)
+        self._info(
+            json.dumps(sent, default=str, ensure_ascii=False), allure=False
+        )
+        self._info(label + ": event after GET:", allure=False)
+        self._info(
+            json.dumps(received, default=str, ensure_ascii=False), allure=False
+        )
 
         got_matches = DatasetSteps(steps.log).compare(received, load_expected_types())
         all_bad = []
@@ -362,16 +361,6 @@ class FlowHelper:
         for bad in all_bad:
             self._info(format_type_bad_finding(bad))
         self._info(label + ": total=" + str(len(all_bad)))
-        self._attach_allure_json(
-            "Type mismatches (" + str(event_label) + ")",
-            {
-                "event": event_label,
-                "mismatches": all_bad,
-                "total": len(all_bad),
-                "event_after_post": sent,
-                "event_after_get": received,
-            },
-        )
 
         AssertHelper.truthy(
             all_bad,
@@ -384,9 +373,11 @@ class FlowHelper:
         return all_bad
 
     def _log_event_data(self, label, event):
-        """Dump the full event JSON into the step log (dashboard)."""
-        self._info(str(label) + ": full event data:")
-        self._info(json.dumps(event, default=str, ensure_ascii=False))
+        """Dump the full event JSON into the dashboard step log (not Allure)."""
+        self._info(str(label) + ": full event data:", allure=False)
+        self._info(
+            json.dumps(event, default=str, ensure_ascii=False), allure=False
+        )
 
     def check_dataset_negative_rule(self, receiver, validator, case):
         """
@@ -448,11 +439,15 @@ class FlowHelper:
         else:
             self._info(label + ": using stored GET body from this run")
 
-        # Always show both events for comparison, then findings under them.
-        self._info(label + ": event after POST:")
-        self._info(json.dumps(sent, default=str, ensure_ascii=False))
-        self._info(label + ": event after GET:")
-        self._info(json.dumps(received, default=str, ensure_ascii=False))
+        # Full events on the dashboard only; Allure gets findings lines below.
+        self._info(label + ": event after POST:", allure=False)
+        self._info(
+            json.dumps(sent, default=str, ensure_ascii=False), allure=False
+        )
+        self._info(label + ": event after GET:", allure=False)
+        self._info(
+            json.dumps(received, default=str, ensure_ascii=False), allure=False
+        )
 
         items = apply_kind(received, rules, kind)
         if not items:
@@ -468,18 +463,6 @@ class FlowHelper:
         for item in items:
             self._info(format_rule_finding(item))
 
-        self._attach_allure_json(
-            str(title) + " (" + str(event_label) + ")",
-            {
-                "event": event_label,
-                "title": title,
-                "kind": kind,
-                "count": len(items),
-                "keys": items,
-                "event_after_post": sent,
-                "event_after_get": received,
-            },
-        )
         self._info(label + ": done — listed " + str(len(items)) + " key(s)")
         return items
 
@@ -534,8 +517,17 @@ class FlowHelper:
         # Dashboard: key before=/after= (same style as negatives).
         self._log_before_after(changed_key, meta.get("before"), changed_value)
 
-        self._post_case(receiver, case_id, sent, item.get("delivery_headers"))
-        received = self.received_equals_sent(receiver, case_id, sent)
+        # Boundary: log expect + key before/after only (no full event dumps in Allure).
+        self._post_case(
+            receiver,
+            case_id,
+            sent,
+            item.get("delivery_headers"),
+            log_body=False,
+        )
+        received = self.received_equals_sent(
+            receiver, case_id, sent, log_body=False
+        )
         props = received["properties"]
         token = props.get("Appdome fusion app token")
         token_findings = [

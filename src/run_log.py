@@ -19,45 +19,26 @@ def event_uuid(payload):
 
 
 def allure_capture(level, message):
-    """Mirror log lines into Allure; attach full JSON bodies (request/response events)."""
+    """Mirror plain log lines into Allure as short steps.
+
+    JSON bodies (full events, headers blobs, etc.) stay on the local dashboard
+    step log only — Allure gets the pytest-style expect / POST / GET / findings
+    lines for every test, without bulky payloads.
+    """
     try:
         import allure
-        from allure_commons.types import AttachmentType
     except ImportError:
         return
 
     text = message if message is not None else ""
     stripped = text.strip()
     try:
+        # Dashboard-only: do not create Allure steps for JSON dumps.
         if stripped.startswith("{") or stripped.startswith("["):
-            try:
-                data = json.loads(stripped)
-            except (json.JSONDecodeError, TypeError):
-                with allure.step("[" + level + "] " + stripped[:240]):
-                    pass
-                return
-
-            uuid = event_uuid(data)
-            pretty = json.dumps(data, indent=2, default=str, ensure_ascii=False)
-            if isinstance(data, dict) and "delivery_headers" in data and len(data) == 1:
-                title = "[" + level + "] delivery headers"
-                name = "delivery-headers.json"
-            elif uuid is not None or (
-                isinstance(data, dict) and ("properties" in data or "UUID" in data)
-            ):
-                title = "[" + level + "] event"
-                if uuid is not None:
-                    title = title + " UUID " + str(uuid)
-                name = "event.json"
-            else:
-                title = "[" + level + "] JSON body"
-                name = "body.json"
-
-            with allure.step(title):
-                allure.attach(pretty, name=name, attachment_type=AttachmentType.JSON)
             return
 
-        with allure.step("[" + level + "] " + stripped[:240]):
+        first = stripped.splitlines()[0] if stripped else ""
+        with allure.step("[" + level + "] " + first[:240]):
             pass
     except Exception:
         pass
@@ -191,7 +172,9 @@ class StepLogHandler(logging.Handler):
                 "message": message,
             }
         )
-        allure_capture(record.levelname, message)
+        # extra={"allure": False} → dashboard only (full event dumps, etc.).
+        if getattr(record, "allure", True):
+            allure_capture(record.levelname, message)
 
 
 class TestRunStore:

@@ -1,5 +1,6 @@
 """One test per generated catalog case type (assignment requirement)."""
 
+import allure
 import pytest
 
 from helpers.asserts import AssertHelper
@@ -25,6 +26,9 @@ def test_negatives(initialize, negatives_receiver, negative):
     Each rule has its own events (new_keys-e1, missing_keys-e1, …).
     Logs every matching key for that case, or nothing to validate.
     """
+    # Keep Allure Parameters short (overwrite the bulky pytest dict).
+    allure.dynamic.parameter("negative", negative.get("id"))
+    allure.dynamic.parameter("rule", negative.get("kind"))
     FlowHelper.check_dataset_negative_rule(
         negatives_receiver, initialize.validator, negative
     )
@@ -36,6 +40,12 @@ def test_boundary(initialize, catalog_receiver, boundary):
     One boundary case per pytest run (named by the key we changed).
     Negative edges (time=-1, short token) get the dashboard (N) tag.
     """
+    # Keep Allure Parameters short (overwrite the bulky pytest dict).
+    allure.dynamic.parameter("boundary", boundary.get("id"))
+    allure.dynamic.parameter("case_id", boundary["case_id"])
+    allure.dynamic.parameter(
+        "change", str(boundary["key"]) + "=" + str(boundary["value"])
+    )
     events, item = FlowHelper.catalog_case(
         initialize.catalog, "boundary", boundary["case_id"]
     )

@@ -21,9 +21,14 @@ class AssertHelper:
         self.log = None
         self.record_uuid = None
 
-    def _info(self, message):
-        if self.log is not None:
+    def _info(self, message, allure=True):
+        """Log a step. allure=False → local dashboard only (keeps Allure lean)."""
+        if self.log is None:
+            return
+        if allure:
             self.log.info(message)
+        else:
+            self.log.info(message, extra={"allure": False})
 
     def _format(self, value):
         try:
@@ -315,7 +320,7 @@ class AssertHelper:
                 ],
                 data=data if data is not None else match,
             )
-        self._attach_tested_values("type_ok", match, "passed")
+        # Pass: step log only (no Allure JSON attachment per field).
         self._info(
             str(field)
             + " got="
@@ -360,7 +365,7 @@ class AssertHelper:
                 ],
                 data=data if data is not None else match,
             )
-        self._attach_tested_values("type_bad", match, "passed")
+        # Pass: finding already logged by the flow (no Allure JSON attachment).
         return True
 
     def post_get_equals(self, receiver, case_id, sent, record_uuid=True):
