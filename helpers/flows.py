@@ -507,7 +507,6 @@ class FlowHelper:
         # Dashboard: key before=/after= (same style as negatives).
         self._log_before_after(changed_key, meta.get("before"), changed_value)
 
-        # Boundary: log expect + key before/after only (no full event dumps in Allure).
         self._post_case(
             receiver,
             case_id,
@@ -518,12 +517,47 @@ class FlowHelper:
         received = self.received_equals_sent(
             receiver, case_id, sent, log_body=False
         )
+
+        # Full events in test.log (dashboard + Allure) — what we sent / what GET returned.
+        self._info(case_id + ": event after POST:")
+        self._info(json.dumps(sent, default=str, ensure_ascii=False))
+        self._info(case_id + ": event after GET:")
+        self._info(json.dumps(received, default=str, ensure_ascii=False))
+
         props = received["properties"]
         token = props.get("Appdome fusion app token")
         token_findings = [
             f.to_dict() for f in validator.check_token_length(received, case_id)
         ]
         time_findings = [f.to_dict() for f in validator.check_time(received, case_id)]
+
+        # Log what we got after GET (same clarity as negatives findings).
+        self._info(
+            "after GET: "
+            + str(changed_key)
+            + "="
+            + self._plain(props.get(changed_key))
+            + (
+                " (len=" + str(len(str(token))) + ")"
+                if changed_key == "Appdome fusion app token"
+                else ""
+            )
+        )
+        findings = token_findings + time_findings
+        if findings:
+            self._info("FINDINGS — " + str(len(findings)) + ":")
+            for finding in findings:
+                self._info(
+                    str(finding.get("rule_id") or "?")
+                    + " field="
+                    + str(finding.get("field") or "?")
+                    + " observed="
+                    + self._plain(finding.get("observed"))
+                    + " expected="
+                    + self._plain(finding.get("expected"))
+                )
+        else:
+            self._info("FINDINGS — none (edge accepted)")
 
         # Confirm the changed key still has that value after GET.
         AssertHelper.equal(
