@@ -22,7 +22,7 @@ class AssertHelper:
         self.record_uuid = None
 
     def _info(self, message, allure=True):
-        """Log a step. allure=False → local dashboard only (keeps Allure lean)."""
+        """Log a step to the dashboard and Allure (same content)."""
         if self.log is None:
             return
         if allure:

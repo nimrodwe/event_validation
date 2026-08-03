@@ -11,7 +11,7 @@ from flask import Flask, jsonify, render_template_string, request, send_from_dir
 from werkzeug.serving import make_server
 
 from src.ci_runs import CI_RUNS
-from src.config import ALLURE_PAGES_URL, DATASET, OUT
+from src.config import DATASET, OUT
 from src.run_log import clear_runs, load_runs
 from src.validate import Validator
 
@@ -210,10 +210,6 @@ DASHBOARD_HTML = """<!DOCTYPE html>
           <h2>Pytest CI runs (shared)</h2>
           <div class="sub" id="ci-sub">Same public catalog on every machine — look here for workflow #38 etc.</div>
         </div>
-        <div class="actions">
-          <button class="btn" id="btn-refresh-ci" type="button">Refresh CI list</button>
-          <a id="btn-allure-pages" class="btn btn-primary" href="{{ allure_pages_url }}" target="_blank" rel="noopener">Open Allure report</a>
-        </div>
       </div>
       <div id="ci-error" class="msg" style="color:#fca5a5"></div>
       <div id="ci-runs" class="empty">Loading…</div>
@@ -222,15 +218,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   <script>
     let testRuns = {{ test_runs_json | safe }};
     let ciPayload = {{ ci_runs_json | safe }};
-    const ALLURE_PAGES_URL = {{ allure_pages_url | tojson }};
     const openRuns = new Set();
     const openTests = new Set();
     const openFolders = new Set();
     const openCiRuns = new Set();
-
-    function allurePagesUrl() {
-      return (ciPayload && ciPayload.allure_pages_url) || ALLURE_PAGES_URL || '';
-    }
 
     function esc(s) {
       return String(s)
@@ -602,8 +593,6 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       const root = document.getElementById('ci-runs');
       const errEl = document.getElementById('ci-error');
       const subEl = document.getElementById('ci-sub');
-      const allureBtn = document.getElementById('btn-allure-pages');
-      const pagesUrl = allurePagesUrl();
       const runs = (ciPayload && ciPayload.runs) || [];
       const updated = (ciPayload && ciPayload.updated_at) || '';
       errEl.textContent = (ciPayload && ciPayload.error) ? ciPayload.error : '';
@@ -611,12 +600,6 @@ DASHBOARD_HTML = """<!DOCTYPE html>
         subEl.textContent = updated
           ? ('Shared catalog · ' + runs.length + ' runs · updated ' + niceDate(updated) + ' — same on Windows and Mac')
           : 'Same public catalog on every machine — look here for workflow numbers like #38';
-      }
-      if (allureBtn && pagesUrl) {
-        allureBtn.href = pagesUrl;
-        allureBtn.style.display = '';
-      } else if (allureBtn) {
-        allureBtn.style.display = 'none';
       }
 
       if (ciPayload && ciPayload.error && !runs.length) {
@@ -628,7 +611,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       }
       if (!runs.length) {
         root.className = 'empty';
-        root.textContent = 'No CI runs yet. Push or run the workflow from Actions. Open Allure report still works once Pages has a deploy.';
+        root.textContent = 'No CI runs yet. Push or run the workflow from Actions.';
         return;
       }
       root.className = '';
@@ -722,7 +705,6 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       testRuns = [];
       renderRuns();
     });
-    document.getElementById('btn-refresh-ci').addEventListener('click', () => refreshCi(true));
     document.getElementById('btn-shutdown').addEventListener('click', async () => {
       await fetch('/api/shutdown', { method: 'POST' });
       document.body.innerHTML = '<main class="panel-pad"><h1>Server shut down</h1><p class="sub">You can close this tab.</p></main>';
@@ -840,6 +822,7 @@ class Report:
                 "uuid_corner",
                 "negatives_named_buckets",
                 "ci_runs_panel",
+                "ci_section_no_header_actions",
             ],
         })
 
@@ -912,7 +895,6 @@ class Report:
             DASHBOARD_HTML,
             test_runs_json=json.dumps(load_runs()),
             ci_runs_json=json.dumps(CI_RUNS.load()),
-            allure_pages_url=ALLURE_PAGES_URL,
         )
 
     def api_received(self):

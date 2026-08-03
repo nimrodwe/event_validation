@@ -53,6 +53,7 @@ class LocalStack:
                 and "uuid_corner" in features
                 and "negatives_named_buckets" in features
                 and "ci_runs_panel" in features
+                and "ci_section_no_header_actions" in features
             )
         except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError):
             return False

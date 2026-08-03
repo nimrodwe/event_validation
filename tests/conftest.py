@@ -68,8 +68,62 @@ def pytest_runtest_setup(item):
     if doc:
         allure.dynamic.description(doc)
 
-    # Event UUID is set in record_uuid as the main Allure parameter for sent events.
-    # Pytest/Allure will also show simple params like field=... for type cases.
+
+def _hide_allure_suite_parameters():
+    """Drop Allure Parameters so Suites shows only the test name.
+
+    pytest-allure stores the full parametrize value (often a huge case dict) under
+    the test name. The pytest id is already in the title (e.g. time=-1, new_keys-e1).
+    """
+    try:
+        from allure_commons import plugin_manager
+    except ImportError:
+        return
+    for plugin in plugin_manager.get_plugins():
+        logger = getattr(plugin, "allure_logger", None)
+        if logger is None:
+            continue
+        try:
+            test_result = logger.get_test(None)
+        except Exception:
+            continue
+        if test_result is None:
+            continue
+        params = getattr(test_result, "parameters", None)
+        if params is not None:
+            del params[:]
+
+
+def _attach_allure_test_log(nodeid):
+    """Attach the full step log as test.log (same lines as the dashboard)."""
+    steps = _steps_for(nodeid)
+    if not steps:
+        return
+    lines = []
+    for step in steps:
+        level = step.get("level") or "INFO"
+        message = step.get("message")
+        if message is None:
+            message = ""
+        lines.append("[" + str(level) + "] " + str(message))
+    try:
+        allure.attach(
+            "\n".join(lines) + "\n",
+            name="test.log",
+            attachment_type=allure.attachment_type.TEXT,
+        )
+    except Exception:
+        pass
+
+
+@pytest.hookimpl(hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    """After the test body: attach full log, drop bulky Allure parameters."""
+    outcome = yield
+    if call.when == "call":
+        _attach_allure_test_log(item.nodeid)
+        _hide_allure_suite_parameters()
+    return outcome
 
 
 def pytest_runtest_logreport(report):
@@ -149,15 +203,10 @@ def initialize(localhost, step_log, request):
     AssertHelper.log = step_log
 
     def record_uuid(uuid):
-        """Persist the first sent UUID for this test (including empty); Allure skips empty."""
+        """Persist the first sent UUID for this test (dashboard + step log / Allure)."""
         text = "" if uuid is None else str(uuid)
         if RUN_STORE.set_uuid(request.node.nodeid, text):
             step_log.info("UUID " + text)
-        try:
-            if text != "":
-                allure.dynamic.parameter("UUID", text)
-        except Exception:
-            pass
 
     AssertHelper.record_uuid = record_uuid
     base = BaseClass(localhost, step_log)

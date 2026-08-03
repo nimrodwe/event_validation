@@ -339,15 +339,11 @@ class FlowHelper:
         else:
             self._info(label + ": using stored GET body from this run")
 
-        # Full events on the dashboard only; Allure gets findings lines below.
-        self._info(label + ": event after POST:", allure=False)
-        self._info(
-            json.dumps(sent, default=str, ensure_ascii=False), allure=False
-        )
-        self._info(label + ": event after GET:", allure=False)
-        self._info(
-            json.dumps(received, default=str, ensure_ascii=False), allure=False
-        )
+        # Same log on dashboard and Allure: what we sent, what GET returned.
+        self._info(label + ": event after POST:")
+        self._info(json.dumps(sent, default=str, ensure_ascii=False))
+        self._info(label + ": event after GET:")
+        self._info(json.dumps(received, default=str, ensure_ascii=False))
 
         got_matches = DatasetSteps(steps.log).compare(received, load_expected_types())
         all_bad = []
@@ -373,11 +369,9 @@ class FlowHelper:
         return all_bad
 
     def _log_event_data(self, label, event):
-        """Dump the full event JSON into the dashboard step log (not Allure)."""
-        self._info(str(label) + ": full event data:", allure=False)
-        self._info(
-            json.dumps(event, default=str, ensure_ascii=False), allure=False
-        )
+        """Dump the full event JSON into the step log (dashboard + Allure)."""
+        self._info(str(label) + ": full event data:")
+        self._info(json.dumps(event, default=str, ensure_ascii=False))
 
     def check_dataset_negative_rule(self, receiver, validator, case):
         """
@@ -439,15 +433,11 @@ class FlowHelper:
         else:
             self._info(label + ": using stored GET body from this run")
 
-        # Full events on the dashboard only; Allure gets findings lines below.
-        self._info(label + ": event after POST:", allure=False)
-        self._info(
-            json.dumps(sent, default=str, ensure_ascii=False), allure=False
-        )
-        self._info(label + ": event after GET:", allure=False)
-        self._info(
-            json.dumps(received, default=str, ensure_ascii=False), allure=False
-        )
+        # Same log on dashboard and Allure: what we sent, what GET returned.
+        self._info(label + ": event after POST:")
+        self._info(json.dumps(sent, default=str, ensure_ascii=False))
+        self._info(label + ": event after GET:")
+        self._info(json.dumps(received, default=str, ensure_ascii=False))
 
         items = apply_kind(received, rules, kind)
         if not items:
