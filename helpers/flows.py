@@ -40,6 +40,9 @@ class FlowHelper:
     def _info(self, message, allure=True):
         AssertHelper._info(message, allure=allure)
 
+    def _log_event_body(self, label, event):
+        AssertHelper._log_event_body(label, event)
+
     def _fail(self, title, details, data=None):
         AssertHelper._fail(title, details, data=data)
 
@@ -78,14 +81,20 @@ class FlowHelper:
             + self._plain(after)
         )
 
-    def _attach_allure_json(self, name, value):
-        AssertHelper._attach_allure_json(name, value)
-
-    def _attach_allure_text(self, name, text):
-        AssertHelper._attach_allure_text(name, text)
-
     def _sent_by_id(self, events):
         return {item["case_id"]: item["event"] for item in events}
+
+    def _schema_type_mismatches(self, steps, payload, schema):
+        """EventsSchema fields on payload that do not fit their declared type."""
+        from helpers.matches import TYPE_SKIP_FIELDS
+
+        bad = []
+        for match in steps.compare(payload, schema):
+            if match.get("field") in TYPE_SKIP_FIELDS:
+                continue
+            if not steps.fits_type(match.get("actual"), match.get("expected_type")):
+                bad.append(match)
+        return bad
 
     def catalog_case(self, catalog, case_type, case_id):
         """Load catalog type and require one case_id; returns (events, manifest_row)."""
@@ -291,10 +300,8 @@ class FlowHelper:
 
         Flow: POST raw row → GET → list every EventsSchema type mismatch once.
         """
-        from helpers.dataset_steps import DatasetSteps
         from helpers.loaders import load_expected_types
         from helpers.logger import format_type_bad_finding
-        from helpers.matches import TYPE_SKIP_FIELDS
 
         short_id = case.get("id") or "?"
         event_label = case.get("event_label") or (
@@ -339,19 +346,12 @@ class FlowHelper:
         else:
             self._info(label + ": using stored GET body from this run")
 
-        # Same log on dashboard and Allure: what we sent, what GET returned.
-        self._info(label + ": event after POST:")
-        self._info(json.dumps(sent, default=str, ensure_ascii=False))
-        self._info(label + ": event after GET:")
-        self._info(json.dumps(received, default=str, ensure_ascii=False))
+        self._log_event_body(label + ": event after POST", sent)
+        self._log_event_body(label + ": event after GET", received)
 
-        got_matches = DatasetSteps(steps.log).compare(received, load_expected_types())
-        all_bad = []
-        for item in got_matches:
-            if item.get("field") in TYPE_SKIP_FIELDS:
-                continue
-            if not steps.fits_type(item.get("actual"), item.get("expected_type")):
-                all_bad.append(item)
+        all_bad = self._schema_type_mismatches(
+            steps, received, load_expected_types()
+        )
 
         self._info(label + ": found " + str(len(all_bad)) + " bad type(s):")
         for bad in all_bad:
@@ -368,10 +368,67 @@ class FlowHelper:
             AssertHelper.type_mismatch(steps, bad)
         return all_bad
 
-    def _log_event_data(self, label, event):
-        """Dump the full event JSON into the step log (dashboard + Allure)."""
-        self._info(str(label) + ": full event data:")
-        self._info(json.dumps(event, default=str, ensure_ascii=False))
+    def check_corrupted_fields(self, receiver, steps, schema, event, corruptions):
+        """
+        Corrupt synthetic fields, POST→GET, detect bad types, fail fits_type.
+
+        Used by the intentional failure that proves the assert path works.
+        """
+        import copy
+
+        from helpers.logger import format_type_bad_finding
+
+        sent = copy.deepcopy(event)
+        props = sent.setdefault("properties", {})
+        for key, bad_value in corruptions:
+            props[key] = bad_value
+
+        self._log_expect(
+            "corrupt "
+            + str(len(corruptions))
+            + " field(s), detect them after GET, then fail fits_type"
+        )
+        for key, bad_value in corruptions:
+            self._info(
+                "corrupt: properties."
+                + str(key)
+                + " = "
+                + repr(bad_value)
+                + " ("
+                + type(bad_value).__name__
+                + ")"
+            )
+
+        case_id = "TYPE-CORRUPT-" + "-".join(
+            str(k).lstrip("$") for k, _ in corruptions
+        )
+        received = self.post_get_equals(
+            receiver, case_id, sent, record_uuid=True
+        )
+
+        self._log_event_body("event after POST", sent)
+        self._log_event_body("event after GET", received)
+
+        bad = self._schema_type_mismatches(steps, received, schema)
+        self._info("detected " + str(len(bad)) + " bad field(s):")
+        for match in bad:
+            self._info(
+                format_type_bad_finding(match).replace(" result=PASS", " result=FAIL")
+            )
+
+        AssertHelper.truthy(
+            bad,
+            "Expected to detect at least one corrupted field after GET",
+            data={"corruptions": list(corruptions)},
+        )
+
+        first = bad[0]
+        self._info(
+            "failing fits_type on field="
+            + str(first.get("field"))
+            + " to verify assert failure path"
+        )
+        AssertHelper.fits_type(steps, first)
 
     def check_dataset_negative_rule(self, receiver, validator, case):
         """
@@ -433,11 +490,8 @@ class FlowHelper:
         else:
             self._info(label + ": using stored GET body from this run")
 
-        # Same log on dashboard and Allure: what we sent, what GET returned.
-        self._info(label + ": event after POST:")
-        self._info(json.dumps(sent, default=str, ensure_ascii=False))
-        self._info(label + ": event after GET:")
-        self._info(json.dumps(received, default=str, ensure_ascii=False))
+        self._log_event_body(label + ": event after POST", sent)
+        self._log_event_body(label + ": event after GET", received)
 
         items = apply_kind(received, rules, kind)
         if not items:
@@ -471,7 +525,7 @@ class FlowHelper:
         sent = sent_by_id.get(case_id)
         AssertHelper.truthy(sent, "Missing event for " + case_id)
 
-        from helpers.params import BOUNDARY_CASE_BY_ID
+        from helpers.pytest_cases import BOUNDARY_CASE_BY_ID
 
         meta = BOUNDARY_CASE_BY_ID.get(case_id) or {}
         if changed_key is None:
@@ -518,11 +572,8 @@ class FlowHelper:
             receiver, case_id, sent, log_body=False
         )
 
-        # Full events in test.log (dashboard + Allure) — what we sent / what GET returned.
-        self._info(case_id + ": event after POST:")
-        self._info(json.dumps(sent, default=str, ensure_ascii=False))
-        self._info(case_id + ": event after GET:")
-        self._info(json.dumps(received, default=str, ensure_ascii=False))
+        self._log_event_body(case_id + ": event after POST", sent)
+        self._log_event_body(case_id + ": event after GET", received)
 
         props = received["properties"]
         token = props.get("Appdome fusion app token")
@@ -622,7 +673,7 @@ class FlowHelper:
         """Run every boundary case (prefer parametrized check_boundary_case in tests)."""
         AssertHelper.truthy(cases, "No boundary cases in manifest")
         from helpers.catalog import Catalog
-        from helpers.params import BOUNDARY_CASE_IDS
+        from helpers.pytest_cases import BOUNDARY_CASE_IDS
 
         by_id = Catalog().by_id(cases)
         for needed in BOUNDARY_CASE_IDS:

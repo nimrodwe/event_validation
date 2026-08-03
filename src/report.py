@@ -137,12 +137,14 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       border-radius: 4px; padding: .05rem .35rem;
     }
     .fail-summary {
+      display: none;
       margin: .35rem 0 .5rem; color: #fca5a5; font-family: ui-monospace, monospace;
       font-size: .82rem; white-space: pre-wrap; word-break: break-word;
       background: rgba(127, 29, 29, 0.35); border-left: 3px solid #f87171;
       padding: .5rem .65rem; border-radius: 4px;
     }
     .fail-summary .fail-title { font-weight: 600; margin-bottom: .4rem; }
+    .test-block.open .fail-summary { display: block; }
     .steps {
       display: none;
       font-family: ui-monospace, monospace; font-size: .78rem; line-height: 1.45;
@@ -150,8 +152,6 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       white-space: pre-wrap; color: #94a3b8;
     }
     .test-block.open .steps { display: block; }
-    /* Failed tests: keep error + data visible (error is above .steps). */
-    .test-block.failed .steps { display: block; }
     .steps .INFO { color: #7dd3fc; }
     .steps .WARNING { color: #fbbf24; }
     .steps .step-line.ERROR {
@@ -222,6 +222,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     const openTests = new Set();
     const openFolders = new Set();
     const openCiRuns = new Set();
+    // Remember which failed tests/folders already got an initial auto-open so
+    // live refresh cannot force them open again after the user collapses them.
+    const autoOpenedTests = new Set();
+    const autoOpenedFolders = new Set();
 
     function esc(s) {
       return String(s)
@@ -378,10 +382,12 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     function makeFolder(kind, folderKey, label, tests, renderChildren, metaExtra) {
       const stats = folderStats(tests);
       const el = document.createElement('div');
-      // Keep folders collapsed unless the user opened them (or a child failed).
-      const autoOpen = stats.failed > 0;
-      el.className = kind + (openFolders.has(folderKey) || autoOpen ? ' open' : '');
-      if (autoOpen) openFolders.add(folderKey);
+      // Auto-open folders with failures once; later toggles stick across refresh.
+      if (stats.failed > 0 && !autoOpenedFolders.has(folderKey)) {
+        autoOpenedFolders.add(folderKey);
+        openFolders.add(folderKey);
+      }
+      el.className = kind + (openFolders.has(folderKey) ? ' open' : '');
       const head = document.createElement('div');
       head.className = 'folder-head';
       head.innerHTML =
@@ -407,7 +413,15 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     function makeTestBlock(runKeyStr, t, displayName) {
       const testKey = runKeyStr + '::' + (t.nodeid || '');
       const block = document.createElement('div');
-      block.className = 'test-block' + (openTests.has(testKey) ? ' open' : '');
+      // Auto-open failed tests once; user collapse must survive live refresh.
+      if (t.outcome === 'failed' && !autoOpenedTests.has(testKey)) {
+        autoOpenedTests.add(testKey);
+        openTests.add(testKey);
+      }
+      block.className =
+        'test-block' +
+        (openTests.has(testKey) ? ' open' : '') +
+        (t.outcome === 'failed' ? ' failed' : '');
       const uuid = testUuid(t) || '—';
       const uuidHtml = `<span class="test-uuid">${esc(uuid)}</span>`;
       const stepList = t.steps || [];
@@ -429,11 +443,6 @@ DASHBOARD_HTML = """<!DOCTYPE html>
       const lines = (t.outcome === 'failed' ? dataSteps : stepList).map(s =>
         `<div class="step-line ${esc(s.level)}"><span class="${esc(s.level)}">[${esc(s.level)}]</span> ${formatStepMessage(s.message)}</div>`
       ).join('') || (t.outcome === 'failed' ? '' : '<div class="empty">No step logs</div>');
-      if (t.outcome === 'failed') {
-        block.classList.add('failed');
-        block.classList.add('open');
-        openTests.add(testKey);
-      }
       const title = document.createElement('div');
       title.className = 'test-title';
       const negHtml = isNegativeTest(t) ? '<span class="test-neg">(N)</span>' : '';

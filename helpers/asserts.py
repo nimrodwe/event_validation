@@ -30,6 +30,36 @@ class AssertHelper:
         else:
             self.log.info(message, extra={"allure": False})
 
+    def _log_event_body(self, label, event):
+        """Log a full event: pretty JSON on dashboard; short Allure step + attachment.
+
+        Dashboard / test.log get the pretty body. Allure gets one step titled
+        with the label (and UUID when present), JSON as event.json — not a
+        giant one-line INFO step.
+        """
+        from src.run_log import event_uuid
+
+        pretty = json.dumps(event, indent=2, default=str, ensure_ascii=False)
+        self._info(str(label), allure=False)
+        self._info(pretty, allure=False)
+
+        try:
+            import allure
+        except Exception:
+            return
+
+        uuid = event_uuid(event)
+        title = str(label) if uuid is None else str(label) + " · UUID " + str(uuid)
+        try:
+            with allure.step("[INFO] " + title):
+                allure.attach(
+                    pretty,
+                    name="event.json",
+                    attachment_type=allure.attachment_type.JSON,
+                )
+        except Exception:
+            pass
+
     def _format(self, value):
         try:
             return json.dumps(value, indent=2, default=str, ensure_ascii=False)
@@ -390,6 +420,14 @@ class AssertHelper:
         from helpers.flows import FlowHelper
 
         return FlowHelper.check_type_bad_case(receiver, steps, case)
+
+    def check_corrupted_fields(self, receiver, steps, schema, event, corruptions):
+        """Assert entry for intentional field corruption (expected to fail)."""
+        from helpers.flows import FlowHelper
+
+        return FlowHelper.check_corrupted_fields(
+            receiver, steps, schema, event, corruptions
+        )
 
 
 AssertHelper = AssertHelper()

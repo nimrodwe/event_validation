@@ -3,10 +3,10 @@ import json
 import re
 
 from services.http_client import HttpClient
-from helpers.steps import Step
+from helpers.type_validator import TypeValidator
 
 
-class DatasetSteps(Step):
+class DatasetSteps(TypeValidator):
     def __init__(self, logger):
         super().__init__(logger)
         self.http = HttpClient(timeout=5, retries=3)

@@ -4,7 +4,7 @@ import pytest
 
 from helpers.asserts import AssertHelper
 from helpers.flows import FlowHelper
-from helpers.params import boundary_pytest_params, negative_pytest_params
+from helpers.pytest_cases import boundary_pytest_params, negative_pytest_params
 
 
 def test_positives(initialize, catalog_receiver):

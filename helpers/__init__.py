@@ -1,14 +1,11 @@
 from helpers.catalog import Catalog
 from helpers.generator import Generator
 from helpers.loaders import DataLoader
-from helpers.matches import FieldMatches
-from helpers.params import ParamIds, TypeParams
+from helpers.pytest_cases import TypeParams
 
 __all__ = [
     "Catalog",
     "DataLoader",
-    "FieldMatches",
     "Generator",
-    "ParamIds",
     "TypeParams",
 ]
