@@ -69,16 +69,23 @@ def pytest_runtest_setup(item):
         allure.dynamic.description(doc)
 
 
-def _hide_allure_suite_parameters():
-    """Drop Allure Parameters so Suites shows only the test name.
+def _slim_allure_parameters(item):
+    """Hide bulky Allure params AFTER historyId is set (must not clear them earlier).
 
-    pytest-allure stores the full parametrize value (often a huge case dict) under
-    the test name. The pytest id is already in the title (e.g. time=-1, new_keys-e1).
+    Clearing parameters in the call phase made every parametrized test share one
+    historyId, so Allure kept only ~8 results. We only slim/hide after teardown
+    when allure-pytest has already written a unique historyId.
     """
     try:
         from allure_commons import plugin_manager
+        from allure_commons.types import ParameterMode
+        from allure_commons.utils import represent
     except ImportError:
         return
+    short = None
+    callspec = getattr(item, "callspec", None)
+    if callspec is not None and getattr(callspec, "id", None) is not None:
+        short = str(callspec.id)
     for plugin in plugin_manager.get_plugins():
         logger = getattr(plugin, "allure_logger", None)
         if logger is None:
@@ -89,9 +96,11 @@ def _hide_allure_suite_parameters():
             continue
         if test_result is None:
             continue
-        params = getattr(test_result, "parameters", None)
-        if params is not None:
-            del params[:]
+        for param in getattr(test_result, "parameters", None) or []:
+            if short is not None:
+                param.value = represent(short)
+            param.excluded = True
+            param.mode = ParameterMode.HIDDEN.value
 
 
 def _attach_allure_test_log(nodeid):
@@ -118,12 +127,22 @@ def _attach_allure_test_log(nodeid):
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item, call):
-    """After the test body: attach full log, drop bulky Allure parameters."""
+    """After the test body: attach the full step log to Allure."""
     outcome = yield
     if call.when == "call":
         _attach_allure_test_log(item.nodeid)
-        _hide_allure_suite_parameters()
     return outcome
+
+
+@pytest.hookimpl(hookwrapper=True, tryfirst=True)
+def pytest_runtest_teardown(item, nextitem):
+    """After allure-pytest sets historyId, hide bulky parameters from the UI.
+
+    tryfirst on a hookwrapper runs last on the way out — after allure-pytest's
+    teardown writes historyId (which ignores excluded params).
+    """
+    yield
+    _slim_allure_parameters(item)
 
 
 def pytest_runtest_logreport(report):

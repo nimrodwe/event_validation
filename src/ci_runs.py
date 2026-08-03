@@ -7,6 +7,7 @@ import requests
 from src.config import (
     ALLURE_PAGES_URL,
     CI_RUNS_CATALOG_FALLBACK_URL,
+    CI_RUNS_CATALOG_RAW_URL,
     CI_RUNS_CATALOG_URL,
     GITHUB_ACTIONS_URL,
     OUT,
@@ -68,9 +69,17 @@ class CiRuns:
         return (updated, count)
 
     def _fetch_catalog(self, force=False):
-        """GET catalog from both mirrors; keep the newest updated_at."""
+        """GET catalog from CDN mirrors; keep the newest updated_at.
+
+        raw.githubusercontent.com is tried last — it often lags the allure-pages
+        push even when Publish Allure succeeded.
+        """
         stamp = str(int(time.time() * 1000))
-        urls = [CI_RUNS_CATALOG_URL, CI_RUNS_CATALOG_FALLBACK_URL]
+        urls = [
+            CI_RUNS_CATALOG_URL,
+            CI_RUNS_CATALOG_FALLBACK_URL,
+            CI_RUNS_CATALOG_RAW_URL,
+        ]
         headers = {
             "User-Agent": "event-validation-dashboard",
             "Cache-Control": "no-cache",
@@ -79,8 +88,8 @@ class CiRuns:
         last_error = None
         best = None
         for base in urls:
-            # Always bust query string — raw CDN may ignore Cache-Control.
-            url = base + "?t=" + stamp
+            # Always bust query string — CDNs may ignore Cache-Control.
+            url = base + ("&" if "?" in base else "?") + "t=" + stamp
             try:
                 response = requests.get(url, headers=headers, timeout=15)
             except requests.RequestException as exc:
@@ -97,7 +106,9 @@ class CiRuns:
             except ValueError as exc:
                 last_error = str(exc)
                 continue
-            if best is None or self._catalog_sort_key(data) > self._catalog_sort_key(best):
+            if best is None or self._catalog_sort_key(data) > self._catalog_sort_key(
+                best
+            ):
                 best = data
         if best is not None:
             return best, None
@@ -109,7 +120,7 @@ class CiRuns:
         return None, (
             "Could not load public CI catalog ("
             + (last_error or "unknown")
-            + "). Check network access to raw.githubusercontent.com."
+            + "). Check network access to raw.githack.com / jsDelivr."
         )
 
     def load(self, limit=None, force=False):

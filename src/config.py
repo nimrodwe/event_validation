@@ -19,15 +19,20 @@ ALLURE_PAGES_URL = "https://nimrodwe.github.io/event_validation/"
 ALLURE_RUNS_URL = (
     "https://raw.githack.com/" + GITHUB_REPO + "/allure-pages/"
 )
+# Public catalog on the allure-pages branch. Prefer CDN mirrors — raw.githubusercontent
+# often stays stale for minutes after Publish pushes the branch.
 CI_RUNS_CATALOG_URL = (
+    "https://raw.githack.com/" + GITHUB_REPO + "/allure-pages/ci-runs.json"
+)
+CI_RUNS_CATALOG_FALLBACK_URL = (
+    "https://cdn.jsdelivr.net/gh/"
+    + GITHUB_REPO
+    + "@allure-pages/ci-runs.json"
+)
+CI_RUNS_CATALOG_RAW_URL = (
     "https://raw.githubusercontent.com/"
     + GITHUB_REPO
     + "/allure-pages/ci-runs.json"
-)
-CI_RUNS_CATALOG_FALLBACK_URL = (
-    "https://raw.githubusercontent.com/"
-    + GITHUB_REPO
-    + "/refs/heads/allure-pages/ci-runs.json"
 )
 GITHUB_ACTIONS_URL = (
     "https://github.com/"

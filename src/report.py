@@ -823,6 +823,7 @@ class Report:
                 "negatives_named_buckets",
                 "ci_runs_panel",
                 "ci_section_no_header_actions",
+                "ci_catalog_cdn_mirrors",
             ],
         })
 
