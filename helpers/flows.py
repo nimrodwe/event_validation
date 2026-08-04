@@ -336,6 +336,9 @@ class FlowHelper:
         """
         One pytest per (event, named rule) that has hits, e.g. e1-new_keys.
 
+        POST → GET equals sent, then the named rule must produce findings
+        (opposite of positives, which require empty findings).
+
         Log order for every negative test:
         1) event after POST
         2) event after GET
@@ -395,9 +398,19 @@ class FlowHelper:
         self._log_roundtrip_events(label, sent, received)
 
         items = apply_kind(received, rules, kind)
-        if not items:
-            self._info("nothing to validate")
-            return []
+        AssertHelper.truthy(
+            items,
+            label
+            + " should produce at least one "
+            + str(kind)
+            + " finding on GET body",
+            data={
+                "kind": kind,
+                "event_label": event_label,
+                "case_id": http_case_id,
+                "index": row_index,
+            },
+        )
 
         self._info(
             label

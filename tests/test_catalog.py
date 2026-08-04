@@ -23,7 +23,8 @@ def test_positives(initialize, catalog_receiver):
 def test_negatives(initialize, negatives_receiver, negative):
     """
     Each rule has its own events (new_keys-e1, missing_keys-e1, …).
-    Logs every matching key for that case, or nothing to validate.
+    POST→GET equals sent, then asserts the named rule produces findings
+    (opposite of positives), and logs every matching key.
     """
     FlowHelper.check_dataset_negative_rule(negatives_receiver, negative)
 

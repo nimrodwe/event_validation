@@ -41,11 +41,10 @@ RULE_SPECS = (
         "id": "empty_got_null",
         "title": "empty string got none or null",
         "kind": "empty_got_null",
-        # Always event-1 … event-10 (first 10 validation rows), even if most have no nulls.
-        "always_sample": True,
+        # Only rows that already have null hits (same as other negative rules).
         "explain": (
             "listing keys present in the validation dataset whose value is null/None"
-            " (with what synthetic had); tested on 10 events like new keys"
+            " (with what synthetic had); up to 10 events that hit this rule"
         ),
     },
     {

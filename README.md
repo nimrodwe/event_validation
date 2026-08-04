@@ -99,7 +99,7 @@ Shared pattern for most cases: **POST** event → **GET** it back → assert on 
 | Test | What it does | Rules / setup | What it asserts |
 | ---- | ------------ | ------------- | --------------- |
 | `test_positives` | POST unchanged synthetic template (`POS-0001`) | Nested validator rules (`check_nested`) | GET body equals sent; **no** nested findings |
-| `test_negatives` | POST validation-dataset rows; compare to synthetic keys | Four named rules (below), up to 10 events each `(N)` | After GET: list hits for that rule (or `nothing to validate`) |
+| `test_negatives` | POST validation-dataset rows; compare to synthetic keys | Four named rules (below), up to 10 events each `(N)` | After GET: assert the named rule produces findings, then list them |
 | `test_boundary` | POST synthetic with one edge change | `time=0`, `time=-1`, token len 29, token len 30 | Changed value still present after GET; edge rule fires or not as expected |
 | `test_retry` | First POST forced to fail, then retry | Attempt 1 → 500; attempt 2 → 200 | Nothing stored after 500; after retry GET equals sent |
 | `test_duplicates` | Same body twice | Receiver fingerprint / duplicate block | First POST 200 + GET ok; second POST **409**, not stored |
