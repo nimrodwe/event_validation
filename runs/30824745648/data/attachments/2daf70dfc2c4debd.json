@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "passed",
+  "field": "appdome_fusion_server_name",
+  "expected_type": "LowCardinality(String)",
+  "actual": "fusion",
+  "actual_type": "str"
+}

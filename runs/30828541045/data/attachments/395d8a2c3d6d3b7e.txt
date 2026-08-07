@@ -1,0 +1,19 @@
+[INFO] expect: RTY-0001 first POST 500 (server could not accept, nothing stored); retry POST 200 with valid event; GET equals sent
+[INFO] expect: RTY-0001 attempt 1: expect status=500
+[INFO] UUID A0000000000000000000000000000001
+[INFO] POST http://127.0.0.1:42617/v1/events case_id=RTY-0001
+[INFO] delivery_headers={"Idempotency-Key": "k1", "X-Retry-Count": "1", "X-Force-Error": "500"}
+[INFO] status=500
+[INFO] GET http://127.0.0.1:42617/v1/events case_id=RTY-0001
+[INFO] status=200
+[INFO] after 500: stored count=0
+[INFO] RTY-0001: server could not accept — retrying same event
+[INFO] expect: RTY-0001 attempt 2 (retry): expect status=200 then GET event
+[INFO] RTY-0001: retry POST (X-Retry-Count=2)
+[INFO] POST http://127.0.0.1:42617/v1/events case_id=RTY-0001
+[INFO] delivery_headers={"Idempotency-Key": "k1", "X-Retry-Count": "2"}
+[INFO] status=200
+[INFO] GET http://127.0.0.1:42617/v1/events case_id=RTY-0001
+[INFO] status=200
+[INFO] after 200: got event UUID A0000000000000000000000000000001
+[INFO] RTY-0001: retry passed

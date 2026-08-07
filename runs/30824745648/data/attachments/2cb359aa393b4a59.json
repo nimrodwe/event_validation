@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "passed",
+  "field": "carriername",
+  "expected_type": "LowCardinality(String)",
+  "actual": "qaPhoneCompany",
+  "actual_type": "str"
+}

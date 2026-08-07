@@ -1,0 +1,7 @@
+[INFO] UUID A0000000000000000000000000000001
+[INFO] POST http://127.0.0.1:39811/v1/events case_id=TYPE-OK-kernelinfo
+[INFO] status=200
+[INFO] GET http://127.0.0.1:39811/v1/events case_id=TYPE-OK-kernelinfo
+[INFO] status=200
+[INFO] expect: field kernelinfo must fit String; POST->GET body unchanged
+[INFO] kernelinfo got='Darwin/localhost/23.5.0/Darwin Kernel Version 23.5.0: Sun Feb 22 12:14:05 EST 2024; root:xnu-10063.122.3~1/RELEASE_ARM64_T8101/iPhone12' (str) expected_type=String result=PASS

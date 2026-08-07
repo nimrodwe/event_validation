@@ -1,0 +1,7 @@
+[INFO] UUID A0000000000000000000000000000001
+[INFO] POST http://127.0.0.1:46573/v1/events case_id=TYPE-OK-host
+[INFO] status=200
+[INFO] GET http://127.0.0.1:46573/v1/events case_id=TYPE-OK-host
+[INFO] status=200
+[INFO] expect: field host must fit String; POST->GET body unchanged
+[INFO] host got='qa-data-validation.example.invalid' (str) expected_type=String result=PASS

@@ -1,0 +1,7 @@
+[INFO] UUID A0000000000000000000000000000001
+[INFO] POST http://127.0.0.1:44833/v1/events case_id=TYPE-OK-immutabledeviceid
+[INFO] status=200
+[INFO] GET http://127.0.0.1:44833/v1/events case_id=TYPE-OK-immutabledeviceid
+[INFO] status=200
+[INFO] expect: field immutabledeviceid must fit String; POST->GET body unchanged
+[INFO] immutabledeviceid got='qa-synthetic-immutable-device-id-fixture-0001' (str) expected_type=String result=PASS

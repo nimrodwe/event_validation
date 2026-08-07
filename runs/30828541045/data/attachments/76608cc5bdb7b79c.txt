@@ -1,0 +1,7 @@
+[INFO] UUID A0000000000000000000000000000001
+[INFO] POST http://127.0.0.1:51007/v1/events case_id=TYPE-OK-enforce_feature
+[INFO] status=200
+[INFO] GET http://127.0.0.1:51007/v1/events case_id=TYPE-OK-enforce_feature
+[INFO] status=200
+[INFO] expect: field enforce_feature must fit LowCardinality(String); POST->GET body unchanged
+[INFO] enforce_feature got='true' (str) expected_type=LowCardinality(String) result=PASS

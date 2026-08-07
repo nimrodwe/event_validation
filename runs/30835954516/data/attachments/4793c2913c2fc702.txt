@@ -1,0 +1,39 @@
+Type check failed for field 'uuid'
+
+what went wrong: Field value does not match the EventsSchema type.
+
+field: uuid
+
+what we got (actual): 12345
+
+what we expected: a value of type String
+
+actual type: int
+
+expected type: String
+
+
+what went wrong:
+Field value does not match the EventsSchema type.
+
+field:
+uuid
+
+what we got (actual):
+12345
+
+what we expected:
+a value of type String
+
+actual type:
+int
+
+expected type:
+String
+
+data:
+{
+  "field": "uuid",
+  "actual": 12345,
+  "expected_type": "String"
+}

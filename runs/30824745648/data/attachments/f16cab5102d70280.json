@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "passed",
+  "field": "timezone",
+  "expected_type": "LowCardinality(String)",
+  "actual": "Australia/Melbourne",
+  "actual_type": "str"
+}

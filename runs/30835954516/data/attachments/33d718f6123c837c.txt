@@ -1,0 +1,7 @@
+[INFO] UUID A0000000000000000000000000000001
+[INFO] POST http://127.0.0.1:44037/v1/events case_id=TYPE-OK-message
+[INFO] status=200
+[INFO] GET http://127.0.0.1:44037/v1/events case_id=TYPE-OK-message
+[INFO] status=200
+[INFO] expect: field message must fit String; POST->GET body unchanged
+[INFO] message got='{app_display_name} detected a MitM threat. For your protection, please switch networks, close and reopen the app. Support REF: 6510' (str) expected_type=String result=PASS

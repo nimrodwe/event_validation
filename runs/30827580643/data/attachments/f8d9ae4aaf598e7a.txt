@@ -1,0 +1,7 @@
+[INFO] UUID A0000000000000000000000000000001
+[INFO] POST http://127.0.0.1:34211/v1/events case_id=TYPE-OK-appname
+[INFO] status=200
+[INFO] GET http://127.0.0.1:34211/v1/events case_id=TYPE-OK-appname
+[INFO] status=200
+[INFO] expect: field appname must fit LowCardinality(String); POST->GET body unchanged
+[INFO] appname got='Browser Android' (str) expected_type=LowCardinality(String) result=PASS

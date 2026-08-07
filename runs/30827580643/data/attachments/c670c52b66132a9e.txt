@@ -1,0 +1,7 @@
+[INFO] UUID A0000000000000000000000000000001
+[INFO] POST http://127.0.0.1:42627/v1/events case_id=TYPE-OK-externalid
+[INFO] status=200
+[INFO] GET http://127.0.0.1:42627/v1/events case_id=TYPE-OK-externalid
+[INFO] status=200
+[INFO] expect: field externalid must fit String; POST->GET body unchanged
+[INFO] externalid got='FridaDetected' (str) expected_type=String result=PASS

@@ -1,0 +1,7 @@
+[INFO] expect: BND-TOKEN-SHORT token len=29 kept after GET; FMT fires
+[INFO] key: Appdome fusion app token before: 11111111-1111-4111-8111-111111111111 after: xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+[INFO] UUID A0000000000000000000000000000001
+[INFO] POST http://127.0.0.1:60835/v1/events case_id=BND-TOKEN-SHORT
+[INFO] status=200
+[INFO] GET http://127.0.0.1:60835/v1/events case_id=BND-TOKEN-SHORT
+[INFO] status=200

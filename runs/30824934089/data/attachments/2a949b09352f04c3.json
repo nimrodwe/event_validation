@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "passed",
+  "field": "osversion",
+  "expected_type": "LowCardinality(String)",
+  "actual": "Version 16.0 (Build 20A362)",
+  "actual_type": "str"
+}

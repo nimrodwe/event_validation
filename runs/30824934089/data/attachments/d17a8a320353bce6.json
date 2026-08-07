@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "passed",
+  "field": "reasondata",
+  "expected_type": "String",
+  "actual": "No Reason Data",
+  "actual_type": "str"
+}

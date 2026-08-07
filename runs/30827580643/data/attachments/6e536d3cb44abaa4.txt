@@ -1,0 +1,7 @@
+[INFO] UUID A0000000000000000000000000000001
+[INFO] POST http://127.0.0.1:59013/v1/events case_id=TYPE-OK-device_id
+[INFO] status=200
+[INFO] GET http://127.0.0.1:59013/v1/events case_id=TYPE-OK-device_id
+[INFO] status=200
+[INFO] expect: field device_id must fit String; POST->GET body unchanged
+[INFO] device_id got='C0000000000000000000000000000003' (str) expected_type=String result=PASS

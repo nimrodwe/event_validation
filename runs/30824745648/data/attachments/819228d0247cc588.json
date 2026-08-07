@@ -1,0 +1,8 @@
+{
+  "check": "type_bad",
+  "result": "passed",
+  "field": "mp_processing_time_ms",
+  "expected_type": "DateTime64(6, 'UTC')",
+  "actual": "July 14, 2026, 16:44",
+  "actual_type": "str"
+}

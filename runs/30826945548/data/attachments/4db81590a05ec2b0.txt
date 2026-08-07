@@ -1,0 +1,10 @@
+[INFO] expect: RPL-0001 replay x2: POST each delivery; GET count == 2; each body equals sent
+[INFO] UUID A0000000000000000000000000000001
+[INFO] POST http://127.0.0.1:48861/v1/events case_id=RPL-0001
+[INFO] delivery_headers={"X-Replay": "false", "X-Delivery": "1"}
+[INFO] status=200
+[INFO] POST http://127.0.0.1:48861/v1/events case_id=RPL-0001
+[INFO] delivery_headers={"X-Replay": "true", "X-Delivery": "2"}
+[INFO] status=200
+[INFO] GET http://127.0.0.1:48861/v1/events case_id=RPL-0001
+[INFO] status=200

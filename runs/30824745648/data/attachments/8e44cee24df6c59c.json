@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "passed",
+  "field": "enforce_feature",
+  "expected_type": "LowCardinality(String)",
+  "actual": "true",
+  "actual_type": "str"
+}

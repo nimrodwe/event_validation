@@ -1,0 +1,7 @@
+[INFO] UUID A0000000000000000000000000000001
+[INFO] POST http://127.0.0.1:55885/v1/events case_id=TYPE-OK-servicename
+[INFO] status=200
+[INFO] GET http://127.0.0.1:55885/v1/events case_id=TYPE-OK-servicename
+[INFO] status=200
+[INFO] expect: field servicename must fit String; POST->GET body unchanged
+[INFO] servicename got='com.example.synthetic' (str) expected_type=String result=PASS

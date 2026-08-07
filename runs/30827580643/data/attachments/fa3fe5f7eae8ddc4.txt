@@ -1,0 +1,7 @@
+[INFO] expect: BND-TIME-NEG time=-1 kept after GET; RANGE-time fires
+[INFO] key: time before: 1777423175525 after: -1
+[INFO] UUID A0000000000000000000000000000001
+[INFO] POST http://127.0.0.1:37123/v1/events case_id=BND-TIME-NEG
+[INFO] status=200
+[INFO] GET http://127.0.0.1:37123/v1/events case_id=BND-TIME-NEG
+[INFO] status=200

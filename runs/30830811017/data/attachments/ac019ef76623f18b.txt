@@ -1,0 +1,7 @@
+[INFO] UUID A0000000000000000000000000000001
+[INFO] POST http://127.0.0.1:40835/v1/events case_id=TYPE-OK-threatcode
+[INFO] status=200
+[INFO] GET http://127.0.0.1:40835/v1/events case_id=TYPE-OK-threatcode
+[INFO] status=200
+[INFO] expect: field threatcode must fit String; POST->GET body unchanged
+[INFO] threatcode got='XTAOPJ' (str) expected_type=String result=PASS

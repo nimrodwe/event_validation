@@ -1,0 +1,7 @@
+[INFO] UUID A0000000000000000000000000000001
+[INFO] POST http://127.0.0.1:44119/v1/events case_id=TYPE-OK-app_build_number
+[INFO] status=200
+[INFO] GET http://127.0.0.1:44119/v1/events case_id=TYPE-OK-app_build_number
+[INFO] status=200
+[INFO] expect: field app_build_number must fit String; POST->GET body unchanged
+[INFO] app_build_number got='1.2' (str) expected_type=String result=PASS

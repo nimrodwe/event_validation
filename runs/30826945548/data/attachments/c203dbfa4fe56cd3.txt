@@ -1,0 +1,6 @@
+[INFO] expect: POS-0001 POST->GET equals sent; check_nested findings empty
+[INFO] UUID A0000000000000000000000000000001
+[INFO] POST http://127.0.0.1:60723/v1/events case_id=POS-0001
+[INFO] status=200
+[INFO] GET http://127.0.0.1:60723/v1/events case_id=POS-0001
+[INFO] status=200

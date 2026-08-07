@@ -1,0 +1,8 @@
+{
+  "check": "type_bad",
+  "result": "passed",
+  "field": "tda",
+  "expected_type": "Map(String, String)",
+  "actual": "{\"trueosversion\":\"17.7.2\",\"truedevicemodel\":\"iPhone14,6\",\"truedevicemanufacturer\":\"Apple\",\"truebiometricstatus\":\"N/A\",\"truecountry\":\"N/A\",\"truedevicecountry\":\"US\",\"truedevicelanguage\":\"en\",\"truelocality\":\"N/A\",\"truelockingstatus\":\"PasscodeNotEnrolled\",\"truetimezone\":\"America/New_York\",\"trustosversion\":\"Safe\",\"trustdevicemodel\":\"Safe\",\"trustdevicemanufacturer\":\"Safe\",\"trustbiometricstatus\":\"Safe\",\"trustlockingstatus\":\"Safe\",\"haslocationpermission\":\"No permission\"}",
+  "actual_type": "str"
+}

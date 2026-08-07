@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "passed",
+  "field": "packagename",
+  "expected_type": "String",
+  "actual": "com.example.synthetic",
+  "actual_type": "str"
+}

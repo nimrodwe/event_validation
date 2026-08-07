@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "passed",
+  "field": "appname",
+  "expected_type": "LowCardinality(String)",
+  "actual": "Browser Android",
+  "actual_type": "str"
+}

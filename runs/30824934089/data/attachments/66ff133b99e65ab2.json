@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "passed",
+  "field": "data",
+  "expected_type": "String",
+  "actual": "/data/app/com.gbox.android-nXKZ8pi69sImn7zrFoWOtQ==/oat/arm/base.odex",
+  "actual_type": "str"
+}

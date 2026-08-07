@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "passed",
+  "field": "unauthorized_ai_assistant",
+  "expected_type": "String",
+  "actual": "",
+  "actual_type": "str"
+}

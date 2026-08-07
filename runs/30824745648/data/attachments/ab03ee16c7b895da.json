@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "passed",
+  "field": "app_build_number",
+  "expected_type": "String",
+  "actual": "1.2",
+  "actual_type": "str"
+}

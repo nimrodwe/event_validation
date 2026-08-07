@@ -1,0 +1,7 @@
+[INFO] expect: BND-0001 time=0 kept after GET; no RANGE-time finding
+[INFO] key: time before: 1777423175525 after: 0
+[INFO] UUID A0000000000000000000000000000001
+[INFO] POST http://127.0.0.1:40407/v1/events case_id=BND-0001
+[INFO] status=200
+[INFO] GET http://127.0.0.1:40407/v1/events case_id=BND-0001
+[INFO] status=200

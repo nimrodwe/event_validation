@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "passed",
+  "field": "deviceplatform",
+  "expected_type": "LowCardinality(String)",
+  "actual": "Android",
+  "actual_type": "str"
+}

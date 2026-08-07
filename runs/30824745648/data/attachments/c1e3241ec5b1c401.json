@@ -1,0 +1,8 @@
+{
+  "check": "type_bad",
+  "result": "passed",
+  "field": "datetime",
+  "expected_type": "DateTime64(3)",
+  "actual": "July 14, 2026, 16:48:41",
+  "actual_type": "str"
+}

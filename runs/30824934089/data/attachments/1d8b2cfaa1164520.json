@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "passed",
+  "field": "host",
+  "expected_type": "String",
+  "actual": "qa-data-validation.example.invalid",
+  "actual_type": "str"
+}

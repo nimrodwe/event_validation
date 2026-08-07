@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "passed",
+  "field": "immutabledeviceid",
+  "expected_type": "String",
+  "actual": "qa-synthetic-immutable-device-id-fixture-0001",
+  "actual_type": "str"
+}

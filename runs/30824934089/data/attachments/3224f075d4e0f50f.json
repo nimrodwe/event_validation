@@ -1,0 +1,6 @@
+{
+  "delivery_headers": {
+    "Idempotency-Key": "k1",
+    "X-Retry-Count": "2"
+  }
+}

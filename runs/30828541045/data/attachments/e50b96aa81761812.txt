@@ -1,0 +1,7 @@
+[INFO] UUID A0000000000000000000000000000001
+[INFO] POST http://127.0.0.1:55189/v1/events case_id=TYPE-OK-installationid
+[INFO] status=200
+[INFO] GET http://127.0.0.1:55189/v1/events case_id=TYPE-OK-installationid
+[INFO] status=200
+[INFO] expect: field installationid must fit String; POST->GET body unchanged
+[INFO] installationid got='E0000000000000000000000000000005' (str) expected_type=String result=PASS

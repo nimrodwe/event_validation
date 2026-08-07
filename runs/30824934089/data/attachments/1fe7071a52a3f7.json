@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "passed",
+  "field": "malware",
+  "expected_type": "LowCardinality(String)",
+  "actual": "notDetected",
+  "actual_type": "str"
+}

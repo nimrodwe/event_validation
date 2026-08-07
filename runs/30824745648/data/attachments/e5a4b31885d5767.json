@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "passed",
+  "field": "appdome_fusion_fused_app_token",
+  "expected_type": "String",
+  "actual": "22222222-2222-4222-8222-222222222222",
+  "actual_type": "str"
+}

@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "passed",
+  "field": "quitaftermessage",
+  "expected_type": "LowCardinality(String)",
+  "actual": "false",
+  "actual_type": "str"
+}

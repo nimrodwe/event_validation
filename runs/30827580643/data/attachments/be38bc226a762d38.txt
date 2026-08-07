@@ -1,0 +1,7 @@
+[INFO] UUID A0000000000000000000000000000001
+[INFO] POST http://127.0.0.1:53063/v1/events case_id=TYPE-OK-appdome_fusion_fused_app_token
+[INFO] status=200
+[INFO] GET http://127.0.0.1:53063/v1/events case_id=TYPE-OK-appdome_fusion_fused_app_token
+[INFO] status=200
+[INFO] expect: field appdome_fusion_fused_app_token must fit String; POST->GET body unchanged
+[INFO] appdome_fusion_fused_app_token got='22222222-2222-4222-8222-222222222222' (str) expected_type=String result=PASS

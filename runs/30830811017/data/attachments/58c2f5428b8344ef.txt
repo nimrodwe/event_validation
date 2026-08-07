@@ -1,0 +1,8 @@
+[INFO] expect: DUP-0001 POST 200 + GET equals sent; DUP-0002 same body POST 409 duplicate and not stored
+[INFO] UUID A0000000000000000000000000000001
+[INFO] POST http://127.0.0.1:58561/v1/events case_id=DUP-0001
+[INFO] status=200
+[INFO] GET http://127.0.0.1:58561/v1/events case_id=DUP-0001
+[INFO] status=200
+[INFO] POST http://127.0.0.1:58561/v1/events case_id=DUP-0002
+[INFO] status=409

@@ -1,0 +1,192 @@
+[INFO] new keys / event-7
+[INFO] new keys / event-7: event id 1E5346609478492DB246328BD5477B70 (dashboard label only — not a rule hit)
+[INFO] new keys / event-7: rule: every key on the validation event must exist on synthetic; if validation has a key synthetic does not (e.g. 'ron'), it is incorrect - listing all such keys with the value found
+[INFO] UUID 1E5346609478492DB246328BD5477B70
+[INFO] new keys / event-7: POST -> GET
+[INFO] POST http://127.0.0.1:59107/v1/events case_id=NEG-row-6
+[INFO] status=200
+[INFO] GET http://127.0.0.1:59107/v1/events case_id=NEG-row-6
+[INFO] status=200
+[INFO] new keys / event-7: event after POST
+[INFO] {
+  "Datetime": "July 14, 2026, 16:50:44",
+  "Event": "Detection Only",
+  "Externalid": "DebuggableEntitlement",
+  "Appdome Fusion Server Name": "qamaster.dev.appdome.com",
+  "Appdome Fusion Fused App Token": "04e1c3a8-12d5-46c3-b11e-9e17f4dd2b67",
+  "Appdome Fusion App Token": "2b378915-5eb3-4b63-b0ba-c97c05176592",
+  "Distinct ID": "automationengine@appdome.com",
+  "Email": "automationengine@appdome.com",
+  "Full Threat Code": "8786:04e1:HXDR13",
+  "Threatcode": "HXDR13",
+  "Geosource IP": "65.74.184.240",
+  "UUID": "1E5346609478492DB246328BD5477B70",
+  "Rinternalerrorcode": "",
+  "Reason": "",
+  "Certificatecn": "",
+  "Certificatesha1": "",
+  "Host": "",
+  "Message": "ENB Mobile detected a potential security threat to this app. To protect you, the app will close. Support REF: 7215",
+  "App Build Number": "7.105.0",
+  "App Version": "7.105.0",
+  "City": "Fairfield",
+  "Country Code": "US",
+  "Mp Manufacturer": "Apple",
+  "Mp Model": "iPhone17,3",
+  "Mp Os": "iOS",
+  "Region": "California",
+  "Timezone": "GMT",
+  "Os Version": "18.6",
+  "Mp Wifi": "true",
+  "Application": "com.apiture.xpressmobile.enbepa.sub",
+  "Carriername": "",
+  "Upgradedfrom": "",
+  "Launch ID": "4DFB81DDC6574963BF77F9AD64539187",
+  "Devicemanufacturer": "Apple",
+  "Devicemodel": "iPhone17,3",
+  "Deviceplatform": "iOS",
+  "Immutabledeviceid": "12f188-O6Of3tWkPkU6lTV/8aYCr3xqzRI1xU+WtXbC7RvGO/M2RUVFOEQzMzVBODI0QUQy-eqjS5mWVC/v7/jaKyupIF31JredpZi6ZBIA=-EGKXl42Ai1wBIQA=",
+  "Kernelinfo": "Darwin/localhost/24.6.0/Darwin Kernel Version 24.6.0: Tue Jul 15 21:54:57 PDT 2025; root:xnu-11417.140.69~16/RELEASE_ARM64_T8140/iPhone17,3",
+  "Malware": "notDetected",
+  "Quitaftermessage": "false",
+  "Reasoncode": "8786",
+  "Reasondata": "The app is debuggable",
+  "Sdkversion": "",
+  "Mp Processing Time Ms": "July 14, 2026, 16:50",
+  "Bucket": "",
+  "Appname": "",
+  "Keyboard": "",
+  "Data": "",
+  "Enforce": "",
+  "Osversion": "Version 18.6 (Build 22G86)",
+  "Sandboxpath": "",
+  "Engine Version": "6.26.11302.77292",
+  "Device ID": "376CD954-271A-419B-B72C-3AC547341944",
+  "Previousimmutabledeviceid": "",
+  "Previousimmutabledeviceidsimilarity": "",
+  "Previousdeviceidsimilarity": "",
+  "Immutabledeviceiddetections": "",
+  "Installationid": "5CECA64D8763464D9CFDA863F6FEEC83",
+  "Packagename": "",
+  "Servicename": "",
+  "Unauthorized Ai Assistant": "",
+  "Showthemessage": "false",
+  "Enforce Feature": "false",
+  "Dispatchappnotification": "false",
+  "Chainexpirationdates": "",
+  "Chainserialnumbers": "",
+  "Playstoreinfo": "",
+  "Properties": "{\"appdomescorekey\":\"0\",\"appdomescorestatekey\":\"{\\n\\t\\\"DebuggableEntitlement\\\":\\t0,\\n\\t\\\"NoLocationPermission\\\":\\t0\\n}\",\"builddate\":\"2026-07-14\",\"currentthreateventscore\":\"0\",\"devicefacedown\":\"false\",\"eventid\":\"12f07a24fe3c75ab9e3501f1e04a9832\",\"geosource_type\":\"Public IP\",\"identity\":\"automationengine@appdome.com\",\"instanceid\":\"6EEE8D335A824AD2AA7422037B14CCD3\",\"invalidatesecret\":\"false\",\"ip\":\"1\",\"lastlocationretrieval\":\"N/A\",\"mp_app_release\":\"1775847613.0.17270\",\"mp_app_version_string\":\"1775847613.0.17270\",\"mp_screen_height\":\"852\",\"mp_screen_width\":\"393\",\"releaseid\":\"7149832dd16d9dc32375fab60a38070c1cfeb2976b7cfe530ab7df4be5348a17\",\"threateventsscore\":\"0\",\"time_since_launch\":\"10.764955\",\"timestamp\":\"1784047844\",\"token\":\"4d47634e789389c852f6655dda0f0e19\",\"user_agent\":\"Unknown\"}",
+  "Tda": "{\"trueosversion\":\"18.6\",\"truedevicemodel\":\"iPhone17,3\",\"truedevicemanufacturer\":\"Apple\",\"truebiometricstatus\":\"N/A\",\"truecountry\":\"N/A\",\"truedevicecountry\":\"US\",\"truedevicelanguage\":\"en\",\"truelocality\":\"N/A\",\"truelockingstatus\":\"PasscodeNotEnrolled\",\"truetimezone\":\"GMT\",\"trustosversion\":\"Safe\",\"trustdevicemodel\":\"Safe\",\"trustdevicemanufacturer\":\"Safe\",\"trustbiometricstatus\":\"Safe\",\"trustlockingstatus\":\"Safe\",\"haslocationpermission\":\"No permission\"}",
+  "Deviceattributes": "",
+  "Deviceidstate": "Ready"
+}
+[INFO] new keys / event-7: event after GET
+[INFO] {
+  "App Build Number": "7.105.0",
+  "App Version": "7.105.0",
+  "Appdome Fusion App Token": "2b378915-5eb3-4b63-b0ba-c97c05176592",
+  "Appdome Fusion Fused App Token": "04e1c3a8-12d5-46c3-b11e-9e17f4dd2b67",
+  "Appdome Fusion Server Name": "qamaster.dev.appdome.com",
+  "Application": "com.apiture.xpressmobile.enbepa.sub",
+  "Appname": "",
+  "Bucket": "",
+  "Carriername": "",
+  "Certificatecn": "",
+  "Certificatesha1": "",
+  "Chainexpirationdates": "",
+  "Chainserialnumbers": "",
+  "City": "Fairfield",
+  "Country Code": "US",
+  "Data": "",
+  "Datetime": "July 14, 2026, 16:50:44",
+  "Device ID": "376CD954-271A-419B-B72C-3AC547341944",
+  "Deviceattributes": "",
+  "Deviceidstate": "Ready",
+  "Devicemanufacturer": "Apple",
+  "Devicemodel": "iPhone17,3",
+  "Deviceplatform": "iOS",
+  "Dispatchappnotification": "false",
+  "Distinct ID": "automationengine@appdome.com",
+  "Email": "automationengine@appdome.com",
+  "Enforce": "",
+  "Enforce Feature": "false",
+  "Engine Version": "6.26.11302.77292",
+  "Event": "Detection Only",
+  "Externalid": "DebuggableEntitlement",
+  "Full Threat Code": "8786:04e1:HXDR13",
+  "Geosource IP": "65.74.184.240",
+  "Host": "",
+  "Immutabledeviceid": "12f188-O6Of3tWkPkU6lTV/8aYCr3xqzRI1xU+WtXbC7RvGO/M2RUVFOEQzMzVBODI0QUQy-eqjS5mWVC/v7/jaKyupIF31JredpZi6ZBIA=-EGKXl42Ai1wBIQA=",
+  "Immutabledeviceiddetections": "",
+  "Installationid": "5CECA64D8763464D9CFDA863F6FEEC83",
+  "Kernelinfo": "Darwin/localhost/24.6.0/Darwin Kernel Version 24.6.0: Tue Jul 15 21:54:57 PDT 2025; root:xnu-11417.140.69~16/RELEASE_ARM64_T8140/iPhone17,3",
+  "Keyboard": "",
+  "Launch ID": "4DFB81DDC6574963BF77F9AD64539187",
+  "Malware": "notDetected",
+  "Message": "ENB Mobile detected a potential security threat to this app. To protect you, the app will close. Support REF: 7215",
+  "Mp Manufacturer": "Apple",
+  "Mp Model": "iPhone17,3",
+  "Mp Os": "iOS",
+  "Mp Processing Time Ms": "July 14, 2026, 16:50",
+  "Mp Wifi": "true",
+  "Os Version": "18.6",
+  "Osversion": "Version 18.6 (Build 22G86)",
+  "Packagename": "",
+  "Playstoreinfo": "",
+  "Previousdeviceidsimilarity": "",
+  "Previousimmutabledeviceid": "",
+  "Previousimmutabledeviceidsimilarity": "",
+  "Properties": "{\"appdomescorekey\":\"0\",\"appdomescorestatekey\":\"{\\n\\t\\\"DebuggableEntitlement\\\":\\t0,\\n\\t\\\"NoLocationPermission\\\":\\t0\\n}\",\"builddate\":\"2026-07-14\",\"currentthreateventscore\":\"0\",\"devicefacedown\":\"false\",\"eventid\":\"12f07a24fe3c75ab9e3501f1e04a9832\",\"geosource_type\":\"Public IP\",\"identity\":\"automationengine@appdome.com\",\"instanceid\":\"6EEE8D335A824AD2AA7422037B14CCD3\",\"invalidatesecret\":\"false\",\"ip\":\"1\",\"lastlocationretrieval\":\"N/A\",\"mp_app_release\":\"1775847613.0.17270\",\"mp_app_version_string\":\"1775847613.0.17270\",\"mp_screen_height\":\"852\",\"mp_screen_width\":\"393\",\"releaseid\":\"7149832dd16d9dc32375fab60a38070c1cfeb2976b7cfe530ab7df4be5348a17\",\"threateventsscore\":\"0\",\"time_since_launch\":\"10.764955\",\"timestamp\":\"1784047844\",\"token\":\"4d47634e789389c852f6655dda0f0e19\",\"user_agent\":\"Unknown\"}",
+  "Quitaftermessage": "false",
+  "Reason": "",
+  "Reasoncode": "8786",
+  "Reasondata": "The app is debuggable",
+  "Region": "California",
+  "Rinternalerrorcode": "",
+  "Sandboxpath": "",
+  "Sdkversion": "",
+  "Servicename": "",
+  "Showthemessage": "false",
+  "Tda": "{\"trueosversion\":\"18.6\",\"truedevicemodel\":\"iPhone17,3\",\"truedevicemanufacturer\":\"Apple\",\"truebiometricstatus\":\"N/A\",\"truecountry\":\"N/A\",\"truedevicecountry\":\"US\",\"truedevicelanguage\":\"en\",\"truelocality\":\"N/A\",\"truelockingstatus\":\"PasscodeNotEnrolled\",\"truetimezone\":\"GMT\",\"trustosversion\":\"Safe\",\"trustdevicemodel\":\"Safe\",\"trustdevicemanufacturer\":\"Safe\",\"trustbiometricstatus\":\"Safe\",\"trustlockingstatus\":\"Safe\",\"haslocationpermission\":\"No permission\"}",
+  "Threatcode": "HXDR13",
+  "Timezone": "GMT",
+  "UUID": "1E5346609478492DB246328BD5477B70",
+  "Unauthorized Ai Assistant": "",
+  "Upgradedfrom": ""
+}
+[INFO] new keys / event-7: FINDINGS — 33 key(s) on GET body:
+[INFO] incorrect: key 'Bucket' is in validation dataset but NOT in synthetic | found value = ""
+[INFO] incorrect: key 'Certificatecn' is in validation dataset but NOT in synthetic | found value = ""
+[INFO] incorrect: key 'Chainexpirationdates' is in validation dataset but NOT in synthetic | found value = ""
+[INFO] incorrect: key 'Chainserialnumbers' is in validation dataset but NOT in synthetic | found value = ""
+[INFO] incorrect: key 'City' is in validation dataset but NOT in synthetic | found value = 'Fairfield'
+[INFO] incorrect: key 'Country Code' is in validation dataset but NOT in synthetic | found value = 'US'
+[INFO] incorrect: key 'Datetime' is in validation dataset but NOT in synthetic | found value = 'July 14, 2026, 16:50:44'
+[INFO] incorrect: key 'Deviceattributes' is in validation dataset but NOT in synthetic | found value = ""
+[INFO] incorrect: key 'Deviceidstate' is in validation dataset but NOT in synthetic | found value = 'Ready'
+[INFO] incorrect: key 'Devicemodel' is in validation dataset but NOT in synthetic | found value = 'iPhone17,3'
+[INFO] incorrect: key 'Email' is in validation dataset but NOT in synthetic | found value = 'automationengine@appdome.com'
+[INFO] incorrect: key 'Engine Version' is in validation dataset but NOT in synthetic | found value = '6.26.11302.77292'
+[INFO] incorrect: key 'Event' is in validation dataset but NOT in synthetic | found value = 'Detection Only'
+[INFO] incorrect: key 'Full Threat Code' is in validation dataset but NOT in synthetic | found value = '8786:04e1:HXDR13'
+[INFO] incorrect: key 'Geosource IP' is in validation dataset but NOT in synthetic | found value = '65.74.184.240'
+[INFO] incorrect: key 'Keyboard' is in validation dataset but NOT in synthetic | found value = ""
+[INFO] incorrect: key 'Mp Manufacturer' is in validation dataset but NOT in synthetic | found value = 'Apple'
+[INFO] incorrect: key 'Mp Model' is in validation dataset but NOT in synthetic | found value = 'iPhone17,3'
+[INFO] incorrect: key 'Mp Os' is in validation dataset but NOT in synthetic | found value = 'iOS'
+[INFO] incorrect: key 'Mp Processing Time Ms' is in validation dataset but NOT in synthetic | found value = 'July 14, 2026, 16:50'
+[INFO] incorrect: key 'Mp Wifi' is in validation dataset but NOT in synthetic | found value = 'true'
+[INFO] incorrect: key 'Playstoreinfo' is in validation dataset but NOT in synthetic | found value = ""
+[INFO] incorrect: key 'Previousdeviceidsimilarity' is in validation dataset but NOT in synthetic | found value = ""
+[INFO] incorrect: key 'Previousimmutabledeviceid' is in validation dataset but NOT in synthetic | found value = ""
+[INFO] incorrect: key 'Previousimmutabledeviceidsimilarity' is in validation dataset but NOT in synthetic | found value = ""
+[INFO] incorrect: key 'Properties' is in validation dataset but NOT in synthetic | found value = '{"appdomescorekey":"0","appdomescorestatekey":"{\\n\\t\\"DebuggableEntitlement\\":\\t0,\\n\\t\\"NoLocationPermission\\":\\t0\\n}","builddate":"2026-07-14","currentthreateventscore":"0","devicefacedown":"false","eventid":"12f07a24fe3c75ab9e3501f1e04a9832","geosource_type":"Public IP","identity":"automationengine@appdome.com","instanceid":"6EEE8D335A824AD2AA7422037B14CCD3","invalidatesecret":"false","ip":"1","lastlocationretrieval":"N/A","mp_app_release":"1775847613.0.17270","mp_app_version_string":"1775847613.0.17270","mp_screen_height":"852","mp_screen_width":"393","releaseid":"7149832dd16d9dc32375fab60a38070c1cfeb2976b7cfe530ab7df4be5348a17","threateventsscore":"0","time_since_launch":"10.764955","timestamp":"1784047844","token":"4d47634e789389c852f6655dda0f0e19","user_agent":"Unknown"}'
+[INFO] incorrect: key 'Reason' is in validation dataset but NOT in synthetic | found value = ""
+[INFO] incorrect: key 'Region' is in validation dataset but NOT in synthetic | found value = 'California'
+[INFO] incorrect: key 'Rinternalerrorcode' is in validation dataset but NOT in synthetic | found value = ""
+[INFO] incorrect: key 'Sandboxpath' is in validation dataset but NOT in synthetic | found value = ""
+[INFO] incorrect: key 'Sdkversion' is in validation dataset but NOT in synthetic | found value = ""
+[INFO] incorrect: key 'Tda' is in validation dataset but NOT in synthetic | found value = '{"trueosversion":"18.6","truedevicemodel":"iPhone17,3","truedevicemanufacturer":"Apple","truebiometricstatus":"N/A","truecountry":"N/A","truedevicecountry":"US","truedevicelanguage":"en","truelocality":"N/A","truelockingstatus":"PasscodeNotEnrolled","truetimezone":"GMT","trustosversion":"Safe","trustdevicemodel":"Safe","trustdevicemanufacturer":"Safe","trustbiometricstatus":"Safe","trustlockingstatus":"Safe","haslocationpermission":"No permission"}'
+[INFO] incorrect: key 'Upgradedfrom' is in validation dataset but NOT in synthetic | found value = ""
+[INFO] new keys / event-7: done — listed 33 key(s)

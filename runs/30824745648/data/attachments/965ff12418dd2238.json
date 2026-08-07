@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "passed",
+  "field": "externalid",
+  "expected_type": "String",
+  "actual": "FridaDetected",
+  "actual_type": "str"
+}

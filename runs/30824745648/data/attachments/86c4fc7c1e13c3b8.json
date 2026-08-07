@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "passed",
+  "field": "message",
+  "expected_type": "String",
+  "actual": "{app_display_name} detected a MitM threat. For your protection, please switch networks, close and reopen the app. Support REF: 6510",
+  "actual_type": "str"
+}

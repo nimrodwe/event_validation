@@ -1,0 +1,6 @@
+{
+  "delivery_headers": {
+    "X-Replay": "true",
+    "X-Delivery": "2"
+  }
+}

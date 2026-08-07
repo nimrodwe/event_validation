@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "passed",
+  "field": "installationid",
+  "expected_type": "String",
+  "actual": "E0000000000000000000000000000005",
+  "actual_type": "str"
+}

@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "passed",
+  "field": "device_id",
+  "expected_type": "String",
+  "actual": "C0000000000000000000000000000003",
+  "actual_type": "str"
+}

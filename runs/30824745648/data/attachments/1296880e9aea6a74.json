@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "passed",
+  "field": "uuid",
+  "expected_type": "String",
+  "actual": "A0000000000000000000000000000001",
+  "actual_type": "str"
+}

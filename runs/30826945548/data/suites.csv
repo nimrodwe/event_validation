@@ -1,0 +1,33 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"
+Sends replay deliveries under one case_id, then asserts GET returns the
+same number of events we POSTed (2→2, 1→1) with matching payloads.
+","16","test_replay","tests","Mon Aug 03 15:19:57 UTC 2026","passed","Mon Aug 03 15:19:57 UTC 2026","","test_catalog","",""
+"
+One test per validation event (e1 … e10). POST→GET the row as-is, then
+list every EventsSchema type mismatch once.
+","14","test_type_bad[e10]","tests","Mon Aug 03 15:20:22 UTC 2026","passed","Mon Aug 03 15:20:22 UTC 2026","","test_data_types","",""
+"
+Sends each positive catalog event, GETs it back (round-trip), then runs the
+same nested rules as negatives and expects no findings.
+","11","test_positives","tests","Mon Aug 03 15:19:48 UTC 2026","passed","Mon Aug 03 15:19:48 UTC 2026","","test_catalog","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","11","test_type_ok[timezone]","tests","Mon Aug 03 15:20:20 UTC 2026","passed","Mon Aug 03 15:20:20 UTC 2026","","test_data_types","",""
+"
+First POST fails (500, server could not accept); retry with the valid event succeeds
+(200) and GET returns that event.
+","17","test_retry","tests","Mon Aug 03 15:19:56 UTC 2026","passed","Mon Aug 03 15:19:56 UTC 2026","","test_catalog","",""
+"
+One boundary case per pytest run (named by the key we changed).
+Negative edges (time=-1, short token) get the dashboard (N) tag.
+","13","test_boundary[Appdome fusion app token (len=30)]","tests","Mon Aug 03 15:19:55 UTC 2026","passed","Mon Aug 03 15:19:55 UTC 2026","","test_catalog","",""
+"
+First duplicate POST is accepted and round-trips; the second same body
+is blocked with 409 and never stored.
+","19","test_duplicates","tests","Mon Aug 03 15:19:57 UTC 2026","passed","Mon Aug 03 15:19:57 UTC 2026","","test_catalog","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+Logs every matching key for that case, or nothing to validate.
+","7","test_negatives[value_got_empty-e10]","tests","Mon Aug 03 15:19:53 UTC 2026","passed","Mon Aug 03 15:19:53 UTC 2026","","test_catalog","",""
