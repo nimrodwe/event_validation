@@ -1,0 +1,8 @@
+{
+  "check": "type_ok",
+  "result": "failed",
+  "field": "appdome_fusion_app_token",
+  "expected_type": "String",
+  "actual": 999,
+  "actual_type": "int"
+}
