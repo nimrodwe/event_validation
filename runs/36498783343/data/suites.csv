@@ -1,0 +1,384 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","9","test_type_ok[malware]","tests","Mon Sep 28 23:35:44 UTC 2026","passed","Mon Sep 28 23:35:44 UTC 2026","","test_data_types","",""
+"
+One boundary case per pytest run (named by the key we changed).
+Negative edges (time=-1, short token) get the dashboard (N) tag.
+","11","test_boundary[time=-1]","tests","Mon Sep 28 23:35:30 UTC 2026","passed","Mon Sep 28 23:35:30 UTC 2026","","test_catalog","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","9","test_type_ok[reasondata]","tests","Mon Sep 28 23:35:43 UTC 2026","passed","Mon Sep 28 23:35:43 UTC 2026","","test_data_types","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","124","test_negatives[new_keys-e10]","tests","Mon Sep 28 23:35:28 UTC 2026","passed","Mon Sep 28 23:35:28 UTC 2026","","test_catalog","",""
+"
+First duplicate POST is accepted and round-trips; the second same body
+is blocked with 409 and never stored.
+","99","test_duplicates","tests","Mon Sep 28 23:35:32 UTC 2026","passed","Mon Sep 28 23:35:32 UTC 2026","","test_catalog","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","10","test_type_ok[uuid]","tests","Mon Sep 28 23:35:37 UTC 2026","passed","Mon Sep 28 23:35:37 UTC 2026","","test_data_types","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","10","test_negatives[missing_keys-e9]","tests","Mon Sep 28 23:35:29 UTC 2026","passed","Mon Sep 28 23:35:29 UTC 2026","","test_catalog","",""
+"
+One test per validation event (e1 … e10). POST→GET the row as-is, then
+list every EventsSchema type mismatch once.
+","12","test_type_bad[e5]","tests","Mon Sep 28 23:35:54 UTC 2026","passed","Mon Sep 28 23:35:54 UTC 2026","","test_data_types","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","4","test_negatives[value_got_empty-e9]","tests","Mon Sep 28 23:35:29 UTC 2026","passed","Mon Sep 28 23:35:29 UTC 2026","","test_catalog","",""
+"
+One test per validation event (e1 … e10). POST→GET the row as-is, then
+list every EventsSchema type mismatch once.
+","13","test_type_bad[e3]","tests","Mon Sep 28 23:35:54 UTC 2026","passed","Mon Sep 28 23:35:54 UTC 2026","","test_data_types","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","79","test_type_ok[timezone]","tests","Mon Sep 28 23:35:53 UTC 2026","passed","Mon Sep 28 23:35:53 UTC 2026","","test_data_types","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","10","test_type_ok[installationid]","tests","Mon Sep 28 23:35:49 UTC 2026","passed","Mon Sep 28 23:35:49 UTC 2026","","test_data_types","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","125","test_negatives[new_keys-e9]","tests","Mon Sep 28 23:35:28 UTC 2026","passed","Mon Sep 28 23:35:28 UTC 2026","","test_catalog","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","10","test_type_ok[externalid]","tests","Mon Sep 28 23:35:52 UTC 2026","passed","Mon Sep 28 23:35:52 UTC 2026","","test_data_types","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","10","test_type_ok[unauthorized_ai_assistant]","tests","Mon Sep 28 23:35:50 UTC 2026","passed","Mon Sep 28 23:35:50 UTC 2026","","test_data_types","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","9","test_type_ok[distinct_id]","tests","Mon Sep 28 23:35:42 UTC 2026","passed","Mon Sep 28 23:35:42 UTC 2026","","test_data_types","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","4","test_negatives[value_got_empty-e3]","tests","Mon Sep 28 23:35:29 UTC 2026","passed","Mon Sep 28 23:35:29 UTC 2026","","test_catalog","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","5","test_negatives[value_got_empty-e10]","tests","Mon Sep 28 23:35:29 UTC 2026","passed","Mon Sep 28 23:35:29 UTC 2026","","test_catalog","",""
+"
+One test per validation event (e1 … e10). POST→GET the row as-is, then
+list every EventsSchema type mismatch once.
+","12","test_type_bad[e8]","tests","Mon Sep 28 23:35:54 UTC 2026","passed","Mon Sep 28 23:35:54 UTC 2026","","test_data_types","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","85","test_type_ok[host]","tests","Mon Sep 28 23:35:47 UTC 2026","passed","Mon Sep 28 23:35:47 UTC 2026","","test_data_types","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","56","test_type_ok[appname]","tests","Mon Sep 28 23:35:37 UTC 2026","passed","Mon Sep 28 23:35:37 UTC 2026","","test_data_types","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","4","test_negatives[value_got_empty-e6]","tests","Mon Sep 28 23:35:29 UTC 2026","passed","Mon Sep 28 23:35:29 UTC 2026","","test_catalog","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","9","test_type_ok[osversion]","tests","Mon Sep 28 23:35:41 UTC 2026","passed","Mon Sep 28 23:35:41 UTC 2026","","test_data_types","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","42","test_type_ok[launch_id]","tests","Mon Sep 28 23:35:45 UTC 2026","passed","Mon Sep 28 23:35:45 UTC 2026","","test_data_types","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","43","test_negatives[missing_keys-e8]","tests","Mon Sep 28 23:35:29 UTC 2026","passed","Mon Sep 28 23:35:29 UTC 2026","","test_catalog","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","9","test_type_ok[enforce]","tests","Mon Sep 28 23:35:42 UTC 2026","passed","Mon Sep 28 23:35:42 UTC 2026","","test_data_types","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","8","test_type_ok[appdome_fusion_server_name]","tests","Mon Sep 28 23:35:36 UTC 2026","passed","Mon Sep 28 23:35:36 UTC 2026","","test_data_types","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","118","test_negatives[new_keys-e8]","tests","Mon Sep 28 23:35:27 UTC 2026","passed","Mon Sep 28 23:35:27 UTC 2026","","test_catalog","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","9","test_type_ok[appdome_fusion_fused_app_token]","tests","Mon Sep 28 23:35:35 UTC 2026","passed","Mon Sep 28 23:35:35 UTC 2026","","test_data_types","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","11","test_negatives[missing_keys-e10]","tests","Mon Sep 28 23:35:29 UTC 2026","passed","Mon Sep 28 23:35:29 UTC 2026","","test_catalog","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","11","test_type_ok[deviceplatform]","tests","Mon Sep 28 23:35:39 UTC 2026","passed","Mon Sep 28 23:35:39 UTC 2026","","test_data_types","",""
+"
+One test per validation event (e1 … e10). POST→GET the row as-is, then
+list every EventsSchema type mismatch once.
+","45","test_type_bad[e9]","tests","Mon Sep 28 23:35:54 UTC 2026","passed","Mon Sep 28 23:35:54 UTC 2026","","test_data_types","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","50","test_type_ok[showthemessage]","tests","Mon Sep 28 23:35:50 UTC 2026","passed","Mon Sep 28 23:35:50 UTC 2026","","test_data_types","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","9","test_type_ok[quitaftermessage]","tests","Mon Sep 28 23:35:44 UTC 2026","passed","Mon Sep 28 23:35:44 UTC 2026","","test_data_types","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","12","test_negatives[new_keys-e2]","tests","Mon Sep 28 23:35:27 UTC 2026","passed","Mon Sep 28 23:35:27 UTC 2026","","test_catalog","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","23","test_type_ok[kernelinfo]","tests","Mon Sep 28 23:35:41 UTC 2026","passed","Mon Sep 28 23:35:41 UTC 2026","","test_data_types","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","4","test_negatives[value_got_empty-e1]","tests","Mon Sep 28 23:35:29 UTC 2026","passed","Mon Sep 28 23:35:29 UTC 2026","","test_catalog","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","9","test_type_ok[devicemanufacturer]","tests","Mon Sep 28 23:35:39 UTC 2026","passed","Mon Sep 28 23:35:39 UTC 2026","","test_data_types","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","65","test_type_ok[application]","tests","Mon Sep 28 23:35:36 UTC 2026","passed","Mon Sep 28 23:35:36 UTC 2026","","test_data_types","",""
+"
+Corrupt one or more synthetic fields, POST→GET, detect the bad fields, then
+fail the type check (intentional failure — proves the assert path works).
+","11","test_corrupted_fields_fail[one-field]","tests","Mon Sep 28 23:35:54 UTC 2026","failed","Mon Sep 28 23:35:54 UTC 2026","","test_data_types","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","5","test_negatives[value_got_empty-e2]","tests","Mon Sep 28 23:35:29 UTC 2026","passed","Mon Sep 28 23:35:29 UTC 2026","","test_catalog","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","9","test_type_ok[app_build_number]","tests","Mon Sep 28 23:35:33 UTC 2026","passed","Mon Sep 28 23:35:33 UTC 2026","","test_data_types","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","9","test_type_ok[immutabledeviceid]","tests","Mon Sep 28 23:35:38 UTC 2026","passed","Mon Sep 28 23:35:38 UTC 2026","","test_data_types","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","10","test_type_ok[dispatchappnotification]","tests","Mon Sep 28 23:35:51 UTC 2026","passed","Mon Sep 28 23:35:51 UTC 2026","","test_data_types","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","118","test_type_ok[os_version]","tests","Mon Sep 28 23:35:40 UTC 2026","passed","Mon Sep 28 23:35:40 UTC 2026","","test_data_types","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","10","test_negatives[missing_keys-e5]","tests","Mon Sep 28 23:35:29 UTC 2026","passed","Mon Sep 28 23:35:29 UTC 2026","","test_catalog","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","9","test_negatives[new_keys-e3]","tests","Mon Sep 28 23:35:27 UTC 2026","passed","Mon Sep 28 23:35:27 UTC 2026","","test_catalog","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","9","test_negatives[missing_keys-e3]","tests","Mon Sep 28 23:35:29 UTC 2026","passed","Mon Sep 28 23:35:29 UTC 2026","","test_catalog","",""
+"
+One test per validation event (e1 … e10). POST→GET the row as-is, then
+list every EventsSchema type mismatch once.
+","12","test_type_bad[e4]","tests","Mon Sep 28 23:35:54 UTC 2026","passed","Mon Sep 28 23:35:54 UTC 2026","","test_data_types","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","4","test_negatives[value_got_empty-e7]","tests","Mon Sep 28 23:35:29 UTC 2026","passed","Mon Sep 28 23:35:29 UTC 2026","","test_catalog","",""
+"
+Corrupt one or more synthetic fields, POST→GET, detect the bad fields, then
+fail the type check (intentional failure — proves the assert path works).
+","29","test_corrupted_fields_fail[three-fields]","tests","Mon Sep 28 23:35:54 UTC 2026","failed","Mon Sep 28 23:35:54 UTC 2026","","test_data_types","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","32","test_type_ok[appdome_fusion_app_token]","tests","Mon Sep 28 23:35:35 UTC 2026","passed","Mon Sep 28 23:35:35 UTC 2026","","test_data_types","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","21","test_type_ok[servicename]","tests","Mon Sep 28 23:35:48 UTC 2026","passed","Mon Sep 28 23:35:48 UTC 2026","","test_data_types","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","14","test_negatives[new_keys-e1]","tests","Mon Sep 28 23:35:27 UTC 2026","passed","Mon Sep 28 23:35:27 UTC 2026","","test_catalog","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","77","test_type_ok[data]","tests","Mon Sep 28 23:35:48 UTC 2026","passed","Mon Sep 28 23:35:48 UTC 2026","","test_data_types","",""
+"
+One test per validation event (e1 … e10). POST→GET the row as-is, then
+list every EventsSchema type mismatch once.
+","13","test_type_bad[e7]","tests","Mon Sep 28 23:35:54 UTC 2026","passed","Mon Sep 28 23:35:54 UTC 2026","","test_data_types","",""
+"
+Sends replay deliveries under one case_id, then asserts GET returns the
+same number of events we POSTed (2→2, 1→1) with matching payloads.
+","14","test_replay","tests","Mon Sep 28 23:35:33 UTC 2026","passed","Mon Sep 28 23:35:33 UTC 2026","","test_catalog","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","8","test_negatives[new_keys-e6]","tests","Mon Sep 28 23:35:27 UTC 2026","passed","Mon Sep 28 23:35:27 UTC 2026","","test_catalog","",""
+"
+One test per validation event (e1 … e10). POST→GET the row as-is, then
+list every EventsSchema type mismatch once.
+","12","test_type_bad[e10]","tests","Mon Sep 28 23:35:54 UTC 2026","passed","Mon Sep 28 23:35:54 UTC 2026","","test_data_types","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","11","test_type_ok[immutabledeviceiddetections]","tests","Mon Sep 28 23:35:51 UTC 2026","passed","Mon Sep 28 23:35:51 UTC 2026","","test_data_types","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","8","test_negatives[new_keys-e5]","tests","Mon Sep 28 23:35:27 UTC 2026","passed","Mon Sep 28 23:35:27 UTC 2026","","test_catalog","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","4","test_negatives[value_got_empty-e5]","tests","Mon Sep 28 23:35:29 UTC 2026","passed","Mon Sep 28 23:35:29 UTC 2026","","test_catalog","",""
+"
+One boundary case per pytest run (named by the key we changed).
+Negative edges (time=-1, short token) get the dashboard (N) tag.
+","11","test_boundary[time=0]","tests","Mon Sep 28 23:35:29 UTC 2026","passed","Mon Sep 28 23:35:29 UTC 2026","","test_catalog","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","10","test_type_ok[message]","tests","Mon Sep 28 23:35:52 UTC 2026","passed","Mon Sep 28 23:35:52 UTC 2026","","test_data_types","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","9","test_negatives[missing_keys-e7]","tests","Mon Sep 28 23:35:29 UTC 2026","passed","Mon Sep 28 23:35:29 UTC 2026","","test_catalog","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","78","test_negatives[value_got_empty-e4]","tests","Mon Sep 28 23:35:29 UTC 2026","passed","Mon Sep 28 23:35:29 UTC 2026","","test_catalog","",""
+"
+Sends each positive catalog event, GETs it back (round-trip), then runs the
+same nested rules as negatives and expects no findings.
+","23","test_positives","tests","Mon Sep 28 23:35:26 UTC 2026","passed","Mon Sep 28 23:35:26 UTC 2026","","test_catalog","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","56","test_type_ok[carriername]","tests","Mon Sep 28 23:35:46 UTC 2026","passed","Mon Sep 28 23:35:46 UTC 2026","","test_data_types","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","9","test_type_ok[device_id]","tests","Mon Sep 28 23:35:38 UTC 2026","passed","Mon Sep 28 23:35:38 UTC 2026","","test_data_types","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","69","test_type_ok[threatcode]","tests","Mon Sep 28 23:35:45 UTC 2026","passed","Mon Sep 28 23:35:45 UTC 2026","","test_data_types","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","9","test_type_ok[reasoncode]","tests","Mon Sep 28 23:35:43 UTC 2026","passed","Mon Sep 28 23:35:43 UTC 2026","","test_data_types","",""
+"
+One boundary case per pytest run (named by the key we changed).
+Negative edges (time=-1, short token) get the dashboard (N) tag.
+","127","test_boundary[Appdome fusion app token (len=29)]","tests","Mon Sep 28 23:35:30 UTC 2026","passed","Mon Sep 28 23:35:30 UTC 2026","","test_catalog","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","4","test_negatives[value_got_empty-e8]","tests","Mon Sep 28 23:35:29 UTC 2026","passed","Mon Sep 28 23:35:29 UTC 2026","","test_catalog","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","8","test_type_ok[app_version]","tests","Mon Sep 28 23:35:34 UTC 2026","passed","Mon Sep 28 23:35:34 UTC 2026","","test_data_types","",""
+"
+One test per validation event (e1 … e10). POST→GET the row as-is, then
+list every EventsSchema type mismatch once.
+","12","test_type_bad[e6]","tests","Mon Sep 28 23:35:54 UTC 2026","passed","Mon Sep 28 23:35:54 UTC 2026","","test_data_types","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","9","test_negatives[new_keys-e7]","tests","Mon Sep 28 23:35:27 UTC 2026","passed","Mon Sep 28 23:35:27 UTC 2026","","test_catalog","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","8","test_negatives[empty_got_null-e1]","tests","Mon Sep 28 23:35:29 UTC 2026","passed","Mon Sep 28 23:35:29 UTC 2026","","test_catalog","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","10","test_type_ok[enforce_feature]","tests","Mon Sep 28 23:35:49 UTC 2026","passed","Mon Sep 28 23:35:49 UTC 2026","","test_data_types","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","97","test_negatives[missing_keys-e1]","tests","Mon Sep 28 23:35:28 UTC 2026","passed","Mon Sep 28 23:35:28 UTC 2026","","test_catalog","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","10","test_negatives[new_keys-e4]","tests","Mon Sep 28 23:35:27 UTC 2026","passed","Mon Sep 28 23:35:27 UTC 2026","","test_catalog","",""
+"
+One test per validation event (e1 … e10). POST→GET the row as-is, then
+list every EventsSchema type mismatch once.
+","12","test_type_bad[e2]","tests","Mon Sep 28 23:35:54 UTC 2026","passed","Mon Sep 28 23:35:54 UTC 2026","","test_data_types","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","9","test_negatives[missing_keys-e4]","tests","Mon Sep 28 23:35:29 UTC 2026","passed","Mon Sep 28 23:35:29 UTC 2026","","test_catalog","",""
+"
+One boundary case per pytest run (named by the key we changed).
+Negative edges (time=-1, short token) get the dashboard (N) tag.
+","50","test_boundary[Appdome fusion app token (len=30)]","tests","Mon Sep 28 23:35:31 UTC 2026","passed","Mon Sep 28 23:35:31 UTC 2026","","test_catalog","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","103","test_negatives[missing_keys-e2]","tests","Mon Sep 28 23:35:29 UTC 2026","passed","Mon Sep 28 23:35:29 UTC 2026","","test_catalog","",""
+"
+POSTs the synthetic event, GETs it back and checks the receiver stored the
+same payload, then checks one field against EventsSchema (must fit).
+","10","test_type_ok[packagename]","tests","Mon Sep 28 23:35:46 UTC 2026","passed","Mon Sep 28 23:35:46 UTC 2026","","test_data_types","",""
+"
+One test per validation event (e1 … e10). POST→GET the row as-is, then
+list every EventsSchema type mismatch once.
+","55","test_type_bad[e1]","tests","Mon Sep 28 23:35:53 UTC 2026","passed","Mon Sep 28 23:35:54 UTC 2026","","test_data_types","",""
+"
+First POST fails (500, server could not accept); retry with the valid event succeeds
+(200) and GET returns that event.
+","14","test_retry","tests","Mon Sep 28 23:35:32 UTC 2026","passed","Mon Sep 28 23:35:32 UTC 2026","","test_catalog","",""
+"
+Each rule has its own events (new_keys-e1, missing_keys-e1, …).
+POST→GET equals sent, then asserts the named rule produces findings
+(opposite of positives), and logs every matching key.
+","9","test_negatives[missing_keys-e6]","tests","Mon Sep 28 23:35:29 UTC 2026","passed","Mon Sep 28 23:35:29 UTC 2026","","test_catalog","",""
