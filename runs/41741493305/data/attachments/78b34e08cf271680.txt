@@ -1,0 +1,11 @@
+what went wrong: Field value does not match the EventsSchema type.
+
+field: appdome_fusion_app_token
+
+what we got (actual): 999
+
+what we expected: a value of type String
+
+actual type: int
+
+expected type: String
