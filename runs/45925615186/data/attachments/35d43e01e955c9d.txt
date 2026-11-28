@@ -1,0 +1,341 @@
+[INFO] missing keys / event-4
+[INFO] missing keys / event-4: event id 8DA4AF7C0F0C46C394A00D10C2FC7548 (dashboard label only — not a rule hit)
+[INFO] missing keys / event-4: rule: every key on synthetic must exist on the validation event; listing keys that are in synthetic but missing from validation (presence only — values are ignored)
+[INFO] UUID 8DA4AF7C0F0C46C394A00D10C2FC7548
+[INFO] missing keys / event-4: using stored GET body from this run
+[INFO] missing keys / event-4: event after POST
+[INFO] {
+  "Datetime": "July 14, 2026, 16:44:20",
+  "Event": "First Use",
+  "Externalid": "First use",
+  "Appdome Fusion Server Name": "qamaster.dev.appdome.com",
+  "Appdome Fusion Fused App Token": "04e1c3a8-12d5-46c3-b11e-9e17f4dd2b67",
+  "Appdome Fusion App Token": "2b378915-5eb3-4b63-b0ba-c97c05176592",
+  "Distinct ID": "automationengine@appdome.com",
+  "Email": "automationengine@appdome.com",
+  "Full Threat Code": "5592:04e1:OP01AO",
+  "Threatcode": "OP01AO",
+  "Geosource IP": "66.85.54.9",
+  "UUID": "8DA4AF7C0F0C46C394A00D10C2FC7548",
+  "Rinternalerrorcode": "",
+  "Reason": "",
+  "Certificatecn": "",
+  "Certificatesha1": "",
+  "Host": "",
+  "Message": "",
+  "App Build Number": "7.105.0",
+  "App Version": "7.105.0",
+  "City": "Santa Clara",
+  "Country Code": "US",
+  "Mp Manufacturer": "Apple",
+  "Mp Model": "iPhone14,6",
+  "Mp Os": "iOS",
+  "Region": "California",
+  "Timezone": "America/New_York",
+  "Os Version": "17.7.2",
+  "Mp Wifi": "true",
+  "Application": "com.apiture.xpressmobile.enbepa.sub",
+  "Carriername": "",
+  "Upgradedfrom": "",
+  "Launch ID": "5CAC7BF707784DC3B9959373498A65CF",
+  "Devicemanufacturer": "Apple",
+  "Devicemodel": "iPhone14,6",
+  "Deviceplatform": "iOS",
+  "Immutabledeviceid": "92f188-LhfrjLybVux9lBI1EhIJf8s7tzBMdYAIxo+iso42LIFBOUMwMEZCNjUwRDE0Qzg5-eqinYoBq9F7PCXVsq9q7UeiT29/eiNnceXo=-YWOXF6uoPdsDIAA=",
+  "Kernelinfo": "Darwin/localhost/23.6.0/Darwin Kernel Version 23.6.0: Thu Sep 12 23:32:59 PDT 2024; root:xnu-10063.142.1.701.1~1/RELEASE_ARM64_T8110/iPhone14,6",
+  "Malware": "notDetected",
+  "Quitaftermessage": "false",
+  "Reasoncode": "5592",
+  "Reasondata": "-",
+  "Sdkversion": "",
+  "Mp Processing Time Ms": "July 14, 2026, 16:44",
+  "Bucket": "",
+  "Appname": "",
+  "Keyboard": "",
+  "Data": "",
+  "Enforce": "",
+  "Osversion": "Version 17.7.2 (Build 21H221)",
+  "Sandboxpath": "",
+  "Engine Version": "6.26.11302.77292",
+  "Device ID": "167BC615-C557-49FD-B263-36089FE31B81",
+  "Previousimmutabledeviceid": "",
+  "Previousimmutabledeviceidsimilarity": "",
+  "Previousdeviceidsimilarity": "",
+  "Immutabledeviceiddetections": "",
+  "Installationid": "7B212EA208DB4E8C824E19CB4A927EBB",
+  "Packagename": "",
+  "Servicename": "",
+  "Unauthorized Ai Assistant": "",
+  "Showthemessage": "false",
+  "Enforce Feature": "false",
+  "Dispatchappnotification": "false",
+  "Chainexpirationdates": "",
+  "Chainserialnumbers": "",
+  "Playstoreinfo": "",
+  "Properties": "{\"appdomescorekey\":\"0\",\"appdomescorestatekey\":\"{\\n\\t\\\"First use\\\":\\t0,\\n\\t\\\"NoLocationPermission\\\":\\t0\\n}\",\"builddate\":\"2026-07-14\",\"currentthreateventscore\":\"0\",\"devicefacedown\":\"false\",\"eventid\":\"47ef7b2f27fe830cd51a535e7b8d7bf8\",\"geosource_type\":\"Public IP\",\"identity\":\"automationengine@appdome.com\",\"installation_id\":\"7B212EA208DB4E8C824E19CB4A927EBB\",\"instanceid\":\"A9C00FB650D14C89842ABF4594A574BE\",\"invalidatesecret\":\"false\",\"ip\":\"1\",\"lastlocationretrieval\":\"N/A\",\"mp_app_release\":\"1775847613.0.17270\",\"mp_app_version_string\":\"1775847613.0.17270\",\"mp_screen_height\":\"667\",\"mp_screen_width\":\"375\",\"releaseid\":\"128ba0d01bcc3da4bedad3930238cf6262b5a29beb8469506add26d0cde774cb\",\"threateventsscore\":\"0\",\"time_since_launch\":\"0.821076\",\"timestamp\":\"1784047460\",\"token\":\"4d47634e789389c852f6655dda0f0e19\",\"user_agent\":\"Unknown\"}",
+  "Tda": "{\"trueosversion\":\"17.7.2\",\"truedevicemodel\":\"iPhone14,6\",\"truedevicemanufacturer\":\"Apple\",\"truebiometricstatus\":\"N/A\",\"truecountry\":\"N/A\",\"truedevicecountry\":\"US\",\"truedevicelanguage\":\"en\",\"truelocality\":\"N/A\",\"truelockingstatus\":\"PasscodeNotEnrolled\",\"truetimezone\":\"America/New_York\",\"trustosversion\":\"Safe\",\"trustdevicemodel\":\"Safe\",\"trustdevicemanufacturer\":\"Safe\",\"trustbiometricstatus\":\"Safe\",\"trustlockingstatus\":\"Safe\",\"haslocationpermission\":\"No permission\"}",
+  "Deviceattributes": "",
+  "Deviceidstate": "Ready"
+}
+[INFO] missing keys / event-4: event after GET
+[INFO] {
+  "App Build Number": "7.105.0",
+  "App Version": "7.105.0",
+  "Appdome Fusion App Token": "2b378915-5eb3-4b63-b0ba-c97c05176592",
+  "Appdome Fusion Fused App Token": "04e1c3a8-12d5-46c3-b11e-9e17f4dd2b67",
+  "Appdome Fusion Server Name": "qamaster.dev.appdome.com",
+  "Application": "com.apiture.xpressmobile.enbepa.sub",
+  "Appname": "",
+  "Bucket": "",
+  "Carriername": "",
+  "Certificatecn": "",
+  "Certificatesha1": "",
+  "Chainexpirationdates": "",
+  "Chainserialnumbers": "",
+  "City": "Santa Clara",
+  "Country Code": "US",
+  "Data": "",
+  "Datetime": "July 14, 2026, 16:44:20",
+  "Device ID": "167BC615-C557-49FD-B263-36089FE31B81",
+  "Deviceattributes": "",
+  "Deviceidstate": "Ready",
+  "Devicemanufacturer": "Apple",
+  "Devicemodel": "iPhone14,6",
+  "Deviceplatform": "iOS",
+  "Dispatchappnotification": "false",
+  "Distinct ID": "automationengine@appdome.com",
+  "Email": "automationengine@appdome.com",
+  "Enforce": "",
+  "Enforce Feature": "false",
+  "Engine Version": "6.26.11302.77292",
+  "Event": "First Use",
+  "Externalid": "First use",
+  "Full Threat Code": "5592:04e1:OP01AO",
+  "Geosource IP": "66.85.54.9",
+  "Host": "",
+  "Immutabledeviceid": "92f188-LhfrjLybVux9lBI1EhIJf8s7tzBMdYAIxo+iso42LIFBOUMwMEZCNjUwRDE0Qzg5-eqinYoBq9F7PCXVsq9q7UeiT29/eiNnceXo=-YWOXF6uoPdsDIAA=",
+  "Immutabledeviceiddetections": "",
+  "Installationid": "7B212EA208DB4E8C824E19CB4A927EBB",
+  "Kernelinfo": "Darwin/localhost/23.6.0/Darwin Kernel Version 23.6.0: Thu Sep 12 23:32:59 PDT 2024; root:xnu-10063.142.1.701.1~1/RELEASE_ARM64_T8110/iPhone14,6",
+  "Keyboard": "",
+  "Launch ID": "5CAC7BF707784DC3B9959373498A65CF",
+  "Malware": "notDetected",
+  "Message": "",
+  "Mp Manufacturer": "Apple",
+  "Mp Model": "iPhone14,6",
+  "Mp Os": "iOS",
+  "Mp Processing Time Ms": "July 14, 2026, 16:44",
+  "Mp Wifi": "true",
+  "Os Version": "17.7.2",
+  "Osversion": "Version 17.7.2 (Build 21H221)",
+  "Packagename": "",
+  "Playstoreinfo": "",
+  "Previousdeviceidsimilarity": "",
+  "Previousimmutabledeviceid": "",
+  "Previousimmutabledeviceidsimilarity": "",
+  "Properties": "{\"appdomescorekey\":\"0\",\"appdomescorestatekey\":\"{\\n\\t\\\"First use\\\":\\t0,\\n\\t\\\"NoLocationPermission\\\":\\t0\\n}\",\"builddate\":\"2026-07-14\",\"currentthreateventscore\":\"0\",\"devicefacedown\":\"false\",\"eventid\":\"47ef7b2f27fe830cd51a535e7b8d7bf8\",\"geosource_type\":\"Public IP\",\"identity\":\"automationengine@appdome.com\",\"installation_id\":\"7B212EA208DB4E8C824E19CB4A927EBB\",\"instanceid\":\"A9C00FB650D14C89842ABF4594A574BE\",\"invalidatesecret\":\"false\",\"ip\":\"1\",\"lastlocationretrieval\":\"N/A\",\"mp_app_release\":\"1775847613.0.17270\",\"mp_app_version_string\":\"1775847613.0.17270\",\"mp_screen_height\":\"667\",\"mp_screen_width\":\"375\",\"releaseid\":\"128ba0d01bcc3da4bedad3930238cf6262b5a29beb8469506add26d0cde774cb\",\"threateventsscore\":\"0\",\"time_since_launch\":\"0.821076\",\"timestamp\":\"1784047460\",\"token\":\"4d47634e789389c852f6655dda0f0e19\",\"user_agent\":\"Unknown\"}",
+  "Quitaftermessage": "false",
+  "Reason": "",
+  "Reasoncode": "5592",
+  "Reasondata": "-",
+  "Region": "California",
+  "Rinternalerrorcode": "",
+  "Sandboxpath": "",
+  "Sdkversion": "",
+  "Servicename": "",
+  "Showthemessage": "false",
+  "Tda": "{\"trueosversion\":\"17.7.2\",\"truedevicemodel\":\"iPhone14,6\",\"truedevicemanufacturer\":\"Apple\",\"truebiometricstatus\":\"N/A\",\"truecountry\":\"N/A\",\"truedevicecountry\":\"US\",\"truedevicelanguage\":\"en\",\"truelocality\":\"N/A\",\"truelockingstatus\":\"PasscodeNotEnrolled\",\"truetimezone\":\"America/New_York\",\"trustosversion\":\"Safe\",\"trustdevicemodel\":\"Safe\",\"trustdevicemanufacturer\":\"Safe\",\"trustbiometricstatus\":\"Safe\",\"trustlockingstatus\":\"Safe\",\"haslocationpermission\":\"No permission\"}",
+  "Threatcode": "OP01AO",
+  "Timezone": "America/New_York",
+  "UUID": "8DA4AF7C0F0C46C394A00D10C2FC7548",
+  "Unauthorized Ai Assistant": "",
+  "Upgradedfrom": ""
+}
+[INFO] missing keys / event-4: FINDINGS — 186 key(s) on GET body:
+[INFO] missing key: '$app_release' is in synthetic but NOT in validation dataset
+[INFO] missing key: '$app_version_string' is in synthetic but NOT in validation dataset
+[INFO] missing key: '$lib_version' is in synthetic but NOT in validation dataset
+[INFO] missing key: '$manufacturer' is in synthetic but NOT in validation dataset
+[INFO] missing key: '$radio' is in synthetic but NOT in validation dataset
+[INFO] missing key: '$wifi' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'GeoSource' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'GeoSource_type' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'Identity' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'deviceID' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'model' is in synthetic but NOT in validation dataset
+[INFO] missing key: '$model' is in synthetic but NOT in validation dataset
+[INFO] missing key: '$os' is in synthetic but NOT in validation dataset
+[INFO] missing key: '$os_version' is in synthetic but NOT in validation dataset
+[INFO] missing key: '$screen_height' is in synthetic but NOT in validation dataset
+[INFO] missing key: '$screen_width' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'mp_device_model' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'fusedAppToken' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'ip' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'mp_lib' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'time' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'latitude' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'longitude' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'permission1' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'permission10' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'permission11' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'permission12' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'permission13' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'permission14' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'permission15' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'permission16' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'permission17' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'permission18' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'permission19' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'permission2' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'permission20' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'permission3' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'permission4' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'permission5' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'permission6' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'permission7' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'permission8' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'permission9' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'deniedPermission1' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'deniedPermission2' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'deniedPermissionCounter' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'activeAccessibilityService1Capability1' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'activeAccessibilityService1Capability2' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'activeAccessibilityService1CapabilityCounter' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'activeAccessibilityService1isAccessibilityTool' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'activeAccessibilityServiceCounter' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'token' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'accessibilityactioncounter' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'accessibilityactiontype' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'activity' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'adbdetectionmethod' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'applaunchwithcallinprogress' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'applicationname' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'automationvendor' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'builddate' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'buildnumber' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'callisvoip' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'certificateissuer_1' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'clickbotapplicationname' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'clickbotpermissiondetectionmethod' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'clickbotunknowntooldetectionmethod' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'context' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'customrootca' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'devicebrand' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'devicehavecellularconnection' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'devicelockedstate' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'emulationtype' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'enforcement_fail_safe' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'failsafe_popup_on_fsw' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'fraudulentlocationtimediff' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'installer_package_name' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'interntableandclasslinkeroffsets' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'invalidate_secret' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'isaab' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'isusbcableconnected' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'locationlong' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'locationverticalaccuracy' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'message_suffix' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'messagetypepopup' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'methodsignature' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'notifyviaurl' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'proxy_ip' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'releaseid' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'runtimeviolatedelementname' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'simallowsvoip' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'swizzledclassname' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'teamfingerprint' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'total_pages_count' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'touchdestination' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'triggering_props' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'truedevicemanufacturer' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'trustdevicemanufacturer' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'trustosversion' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'uid' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'updatedosversion' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'userallowedservicecounter' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'viewname' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'vpndetectionmethod' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'waskeyeventdetected' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'is_qa_data' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'activityname' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'batterylevel' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'batterystate' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'builduser' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'callinprogress' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'callisincoming' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'carrierplmn' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'certscount' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'classname' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'conditionalexit' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'deviceboard' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'devicefacedown' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'disallowing_non_system_overlays' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'displayname' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'dylibnames' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'enforcement_nonce' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'enforcement_type' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'eventid' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'failsafe_popup_on_app_triggered' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'fraudulentlocationaveragespeed' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'geofencinglocationname' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'hookframework' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'hostnames' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'incompatiblesslversion' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'isprocreadable' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'isrunninginforeground' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'locationhorizontalaccuracy' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'locationlat' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'mainbundlepath' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'methodname' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'newlibartversion' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'permissioncounter' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'shortmessage' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'swizzlechecktype' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'swizzledmethod1' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'swizzlinglibcount' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'swizzlinglibidentifier' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'swizzlinglibmethods' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'swizzlinglibmethods1' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'swizzlinglibname1' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'symbol' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'threateventsscore' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'time_since_launch' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'total_heap_pages_count' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'trustdevicemodel' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'urltoopen' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'userallowedservice1' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'virtualization_app' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'virtualspaceapp' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'activeaccessibilityservice1' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'arch' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'basebandversion' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'buildhost' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'cacount' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'clickbotcloakingfingerdetectionmethod' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'clickbotpatterndetectionmethod' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'currentthreateventscore' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'currenttimezone' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'dataroaming' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'detectedapppath' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'deveventdetailederrormessage' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'devicefingerprint' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'error' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'fraudulentlocationdistance' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'functionname' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'incompatiblecipherid' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'invalidatesecret' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'issandboxpathwritable' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'library' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'locationaltitude' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'modifiedpackagename' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'runningonmac' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'serialnumber' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'swizzledmethod2' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'swizzledmethodscount' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'swizzlinglibidentifier1' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'swizzlinglibname' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'truedevicemodel' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'trueosversion' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'wasmotioneventdetected' is in synthetic but NOT in validation dataset
+[INFO] missing key: 'defaultMessage' is in synthetic but NOT in validation dataset
+[INFO] missing keys / event-4: done — listed 186 key(s)
